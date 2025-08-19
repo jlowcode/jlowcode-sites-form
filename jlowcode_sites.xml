@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<extension group="fabrik_form" method="upgrade" type="plugin" version="4">
+	<name>PLG_FABRIK_FORM_JLOWCODE_SITES</name>
+	<author>Jlowcode Organization</author>
+	<creationDate>August 2025</creationDate>
+	<copyright>Copyright (C) 2025 Jlowcode Org - All rights reserved.</copyright>
+	<license>GNU/GPL http://www.gnu.org/copyleft/gpl.html</license>
+	<authorEmail>contact@jlowcode.org</authorEmail>
+	<authorUrl>www.jlowcode.org</authorUrl>
+	<version>1.0.0</version>
+	<description>PLG_FABRIK_FORM_JLOWCODE_SITES_DESCRIPTION</description>
+	<files>
+		<filename plugin="jlowcode_sites">jlowcode_sites.php</filename>
+		<filename>jlowcode_sites-min.js</filename>
+		<filename>jlowcode_sites.js</filename>
+		<filename>index.html</filename>
+		<folder>language</folder>
+		<folder>forms</folder>
+	</files>
+</extension>
