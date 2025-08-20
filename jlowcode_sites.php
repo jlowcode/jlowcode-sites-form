@@ -12,7 +12,6 @@
 defined('_JEXEC') or die('Restricted access');
 
 use Joomla\CMS\Factory;
-use Joomla\CMS\Uri\Uri;
 use Joomla\CMS\Language\Text;
 
 /**
@@ -82,8 +81,11 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
      */
     private function createItemMenu($source, $title, $index)
     {
+        $app = Factory::getApplication();
         $menuModel = Factory::getApplication()->bootComponent('com_menus')->getMVCFactory()->createModel('Item', 'Administrator');
+        
         $menuModel->getState(); 	//We need do this to set __state_set before the save
+        $menu = $app->getMenu();
 
         $formModel = $this->getModel();
         $formData = $formModel->getData();
@@ -92,8 +94,15 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
         $exist = $this->menuItemExists($index);
 
         $useList = !empty($listId);
-        $id = $exist ? $this->getIdMenuItem($index) : 0;
-        $link = $useList ? 'index.php?option=com_fabrik&view=list&listid=' . $listId : $source;
+        $url = "index.php?option=com_fabrik&view=list&listid=$listId";
+
+        if($useList) {
+            $menuItem = $menu->getItems('link', $url, true);
+            $id = $menuItem->id ?? 0;
+        }
+
+        $id = $exist ? $this->getIdMenuItem($index) : $id;
+        $link = $useList ? $url : $source;
         $type = $useList ? 'component' : 'url';
         $componentId = $useList ? $this->componentId : 0;
         $browserNav = $useList ? 0 : 1;
@@ -111,7 +120,7 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
         $data->browserNav = $browserNav;
 
         if (!$menuModel->save((array) $data)) {
-			throw new Exception(Text::sprintf("PLG_FABRIK_FORM_JLOWCODE_SITES_ERROR_SAVE_MENU_ITEM", $title));
+			throw new Exception(Text::sprintf("PLG_FABRIK_FORM_JLOWCODE_SITES_ERROR_SAVE_MENU_ITEM", $title, $menuModel->getError()));
         }
 
         $idRow = $formData[$this->repeatTable . '___id'][$index];
@@ -119,6 +128,7 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
         $itemId = $menuModel->getState('item.id');
 
         $this->updateIdMenuItens($idRow, $itemId);
+        $this->updateAdmClonerListas($listId, $menuModel->getItem($itemId)->path);
     }
 
     /**
@@ -127,7 +137,6 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
 	 * @param       array       &$groups        List data for deletion
 	 *
 	 * @return      bool
-     * 
      */
     public function onDeleteRowsForm(&$groups)
     {
@@ -154,7 +163,7 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
                         $data->published = -2;
 
                         if (!$menuModel->save((array) $data)) {
-                            $app->enqueueMessage(Text::_("PLG_FABRIK_FORM_JLOWCODE_SITES_ERROR_DELETE_MENU_ITEM"));
+                            $app->enqueueMessage(Text::sprintf("PLG_FABRIK_FORM_JLOWCODE_SITES_ERROR_DELETE_MENU_ITEM", $menuModel->getError()));
                         }
                     }
 				}
@@ -165,6 +174,7 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
     /**
      * This method create or update the parent menu to use like a separator
      * 
+     * @return      null
      */
     private function createParentMenu()
     {
@@ -190,7 +200,7 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
         $data->component_id = 0;
 
         if (!$menuModel->save((array) $data)) {
-			throw new Exception(Text::_('PLG_FABRIK_FORM_JLOWCODE_SITES_ERROR_SAVE_MENU'));
+			throw new Exception(Text::sprintf('PLG_FABRIK_FORM_JLOWCODE_SITES_ERROR_SAVE_MENU', $menuModel->getError()));
         }
 
 		$this->idParentMenu = $menuModel->getState('item.id');
@@ -365,5 +375,34 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
         $joinModel->setId($groups[$idGroupItens]->join_id);
 
         $this->repeatTable = $joinModel->getJoin()->table_join;
+    }
+
+    /**
+     * This method update the path in adm_cloner_listas table using menu id
+     * 
+     * @param       int     $listId     List id to update in adm_cloner_listas table
+     * @param       int     $path       New path to update in adm_cloner_listas table
+     * 
+     * @return      null
+     */
+    private function updateAdmClonerListas($listId, $path)
+    {
+        $db = Factory::getContainer()->get('DatabaseDriver');
+        $app = Factory::getApplication();
+
+        if(empty($listId)) {
+            return;
+        }
+
+        if (!str_starts_with($path, '/')) {
+            $path = '/' . $path;
+        }
+
+        $query = $db->getQuery(true);
+        $query->update($db->qn('adm_cloner_listas'))
+            ->set($db->qn('link') . ' = ' . $db->q($path))
+            ->where($db->qn('id_lista') . ' = ' . $db->q($listId));
+        $db->setQuery($query);
+        $db->execute();
     }
 }
