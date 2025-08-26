@@ -23,8 +23,9 @@ use Joomla\CMS\Language\Text;
 class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form 
 {
     private $componentId;
-    private $idParentMenu;
     private $repeatTable;
+    private $idParentMenuType;
+    private $idSeparatorMenu;
 
     public function __construct(&$subject, $config = array()) 
     {
@@ -49,7 +50,8 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
 
         $this->setTableForQuery();
         $this->setComponentId();
-        $this->createParentMenu();
+        $this->createMenuType();
+        $this->createSeparatorMenu();
 
         $qtnItens = $this->countQtnItens($formData['id']);
         for ($i=0; $i < $qtnItens; $i++) {
@@ -71,6 +73,91 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
     }
 
     /**
+     * This method create or update the menu type to use as a father for the menu itens
+     * 
+     * @return      null
+     */
+    private function createMenuType()
+    {
+        $modelMenu = Factory::getApplication()->bootComponent('com_menus')->getMVCFactory()->createModel('Menu', 'Administrator');
+        $modelMenu->getState(); 	//We need do this to set __state_set before the save
+
+        $formModel = $this->getModel();
+        $formData = $formModel->formData;
+
+        $siteName = $formData['name'];
+        $alias = $formData['url'] ?? $siteName;
+        $exist = $this->checkParentMenuTypeExists();
+
+        $data = new stdClass();
+        $data->id = $exist ? $formData['id_parent_menutype'] : 0;
+        $data->menutype = $alias;
+        $data->title = $siteName;
+        $data->description = Text::sprintf('PLG_FABRIK_FORM_JLOWCODE_SITES_DESCRIPTION_MENU_TYPE', $siteName);
+        $data->client_id = '0';
+
+        if (!$modelMenu->save((array) $data)) {
+			throw new Exception(Text::sprintf('PLG_FABRIK_FORM_JLOWCODE_SITES_ERROR_SAVE_MENU', $modelMenu->getError()));
+        }
+
+		$this->idParentMenuType = $modelMenu->getState('menu.id');
+        $this->updateParentMenuType($formData['id'], $this->idParentMenuType);
+    }
+
+    /**
+     * This method create or update the parent menu to use like a separator
+     * 
+     * @return      null
+     */
+    private function createSeparatorMenu()
+    {
+        $modelItem = Factory::getApplication()->bootComponent('com_menus')->getMVCFactory()->createModel('Item', 'Administrator');
+        $modelMenu = Factory::getApplication()->bootComponent('com_menus')->getMVCFactory()->createModel('Menu', 'Administrator');
+
+        $modelItem->getState(); 	//We need do this to set __state_set before the save
+        $modelMenu->getState(); 	//We need do this to set __state_set before the save
+
+        $formModel = $this->getModel();
+        $formData = $formModel->formData;
+
+        $siteName = $formData['name'];
+        $alias = $formData['url'] ?? $siteName;
+        $exist = $this->checkSeparatorMenuExists();
+        $indexHomeScreen = $this->getIndexDataHomeScreen();
+
+        $listId = $this->getRepeatableData('menu_list', $indexHomeScreen);
+        $source = $this->getRepeatableData('menu_list', $indexHomeScreen) ?? $this->getRepeatableData('menu_link', $indexHomeScreen);
+        $exist = $this->checkSeparatorMenuExists();
+
+        $useList = !empty($listId);
+        $url = "index.php?option=com_fabrik&view=list&listid=$listId";
+        $id = $exist ? $formData['id_separator_menu_item'] : 0;
+        $link = $useList ? $url : $source;
+        $type = $useList ? 'component' : 'url';
+        $componentId = $useList ? $this->componentId : 0;
+        $browserNav = $useList ? 0 : 1;
+
+        $data = new stdClass();
+        $data->id = $id;
+        $data->title = $siteName;
+        $data->alias = $alias;
+        $data->link = $link;
+        $data->menutype = $modelMenu->getItem($this->idParentMenuType)->menutype;
+        $data->type = $type;
+        $data->published = 1;
+        $data->parent_id = 1;
+        $data->component_id = $componentId;
+        $data->browserNav = $browserNav;
+
+        if (!$modelItem->save((array) $data)) {
+			throw new Exception(Text::sprintf('PLG_FABRIK_FORM_JLOWCODE_SITES_ERROR_SAVE_MENU', $modelItem->getError()));
+        }
+
+		$this->idSeparatorMenu = $modelItem->getState('item.id');
+        $this->updateSeparatorMenu($formData['id'], $this->idSeparatorMenu);
+    }
+
+    /**
      * This method create or updated the menu itens related with parent menu
      * 
      * @param       string      $source     List id or url
@@ -82,9 +169,11 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
     private function createItemMenu($source, $title, $index)
     {
         $app = Factory::getApplication();
-        $menuModel = Factory::getApplication()->bootComponent('com_menus')->getMVCFactory()->createModel('Item', 'Administrator');
-        
-        $menuModel->getState(); 	//We need do this to set __state_set before the save
+        $modelItem = Factory::getApplication()->bootComponent('com_menus')->getMVCFactory()->createModel('Item', 'Administrator');
+        $modelMenu = Factory::getApplication()->bootComponent('com_menus')->getMVCFactory()->createModel('Menu', 'Administrator');
+
+        $modelItem->getState(); 	//We need do this to set __state_set before the save
+        $modelMenu->getState(); 	//We need do this to set __state_set before the save
         $menu = $app->getMenu();
 
         $formModel = $this->getModel();
@@ -101,7 +190,7 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
             $id = $menuItem->id ?? 0;
         }
 
-        $id = $exist ? $this->getIdMenuItem($index) : $id;
+        $id = $exist ? $this->getRepeatableData('menu_id', $index) : $id;
         $link = $useList ? $url : $source;
         $type = $useList ? 'component' : 'url';
         $componentId = $useList ? $this->componentId : 0;
@@ -112,23 +201,23 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
         $data->title = $title;
         $data->alias = $title;
         $data->link = $link;
-        $data->menutype = 'hide';
+        $data->menutype = $modelMenu->getItem($this->idParentMenuType)->menutype;
         $data->type = $type;
         $data->published = 1;
-        $data->parent_id = $this->idParentMenu;
+        $data->parent_id = $this->idSeparatorMenu;
         $data->component_id = $componentId;
         $data->browserNav = $browserNav;
 
-        if (!$menuModel->save((array) $data)) {
-			throw new Exception(Text::sprintf("PLG_FABRIK_FORM_JLOWCODE_SITES_ERROR_SAVE_MENU_ITEM", $title, $menuModel->getError()));
+        if (!$modelItem->save((array) $data)) {
+			throw new Exception(Text::sprintf("PLG_FABRIK_FORM_JLOWCODE_SITES_ERROR_SAVE_MENU_ITEM", $title, $modelItem->getError()));
         }
 
         $idRow = $formData[$this->repeatTable . '___id'][$index];
         $idRow = is_array($idRow) ? $idRow[0] : $idRow;
-        $itemId = $menuModel->getState('item.id');
+        $itemId = $modelItem->getState('item.id');
 
         $this->updateIdMenuItens($idRow, $itemId);
-        $this->updateAdmClonerListas($listId, $menuModel->getItem($itemId)->path);
+        $this->updateAdmClonerListas($listId, $modelItem->getItem($itemId)->path);
     }
 
     /**
@@ -141,9 +230,11 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
     public function onDeleteRowsForm(&$groups)
     {
         $app = Factory::getApplication();
-        $menuModel = Factory::getApplication()->bootComponent('com_menus')->getMVCFactory()->createModel('Item', 'Administrator');
+        $modelItem = Factory::getApplication()->bootComponent('com_menus')->getMVCFactory()->createModel('Item', 'Administrator');
+        $modelMenu = Factory::getApplication()->bootComponent('com_menus')->getMVCFactory()->createModel('Menu', 'Administrator');
 
-        $menuModel->getState(); 	//We need do this to set __state_set before the save
+        $modelItem->getState(); 	//We need do this to set __state_set before the save
+        $modelMenu->getState(); 	//We need do this to set __state_set before the save
         $this->setTableForQuery();
 
         $formModel = $this->getModel();
@@ -153,69 +244,67 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
 			foreach ($group as $rows) {
 				foreach ($rows as $row) {
                     $columnMenuId = $this->repeatTable . '___menu_id';
-                    $columnParentMenu = $table . '___id_parent_menu';
+                    $columnSeparatorMenu = $table . '___id_separator_menu_item';
+                    $columnParentMenuType = $table . '___id_parent_menutype';
 
+                    // Move the menu itens to hide menu
                     $menuItens = json_decode($row->$columnMenuId);
-                    $menuItens[] = $row->$columnParentMenu;
-
                     foreach ($menuItens as $idMenu) {
-                        $data = $menuModel->getItem($idMenu);
-                        $data->published = -2;
+                        $data = $modelItem->getItem($idMenu);
+                        $data->menutype = 'hide';
 
-                        if (!$menuModel->save((array) $data)) {
-                            $app->enqueueMessage(Text::sprintf("PLG_FABRIK_FORM_JLOWCODE_SITES_ERROR_DELETE_MENU_ITEM", $menuModel->getError()));
+                        if (!$modelItem->save((array) $data)) {
+                            $app->enqueueMessage(Text::sprintf("PLG_FABRIK_FORM_JLOWCODE_SITES_ERROR_DELETE_MENU_ITEM", $modelItem->getError()));
                         }
                     }
+
+                    // Delete the respective separator menu item
+                    $idSeparatorMenuItem = array($row->$columnSeparatorMenu);
+                    $modelItem->delete($idSeparatorMenuItem);
+
+                    // Delete the respective menu type
+                    $idParentMenuType = array($row->$columnParentMenuType);
+                    $modelMenu->delete($idParentMenuType);
 				}
 			}
 		}
     }
 
     /**
-     * This method create or update the parent menu to use like a separator
+     * This method verify the repeatable group to find the home screen for the website
+     * The home screen cant be a url
      * 
-     * @return      null
+     * @return      int
      */
-    private function createParentMenu()
+    private function getIndexDataHomeScreen()
     {
-        $menuModel = Factory::getApplication()->bootComponent('com_menus')->getMVCFactory()->createModel('Item', 'Administrator');
-        $menuModel->getState(); 	//We need do this to set __state_set before the save
-
         $formModel = $this->getModel();
         $formData = $formModel->formData;
 
-        $siteName = $formData['name'];
-        $alias = $formData['url'] ?? $siteName;
-        $exist = $this->parentMenuExists();
+        $qtnItens = $this->countQtnItens($formData['id']);
+        $index = null;
 
-        $data = new stdClass();
-        $data->id = $exist ? $this->getIdParentMenu() : 0;
-        $data->title = $siteName;
-        $data->alias = $alias;
-        $data->link = '';
-        $data->menutype = 'hide';
-        $data->type = 'separator';
-        $data->published = 1;
-        $data->parent_id = 1;
-        $data->component_id = 0;
+        for ($i=0; $i < $qtnItens; $i++) { 
+            $listId = $this->getRepeatableData('menu_list', $i);
 
-        if (!$menuModel->save((array) $data)) {
-			throw new Exception(Text::sprintf('PLG_FABRIK_FORM_JLOWCODE_SITES_ERROR_SAVE_MENU', $menuModel->getError()));
+            if((bool) $formData['menu_home_page'][$i] && !empty($listId)) {
+                $index = $i;
+                break;
+            }
         }
 
-		$this->idParentMenu = $menuModel->getState('item.id');
-        $this->updateIdParentMenu($formData['id'], $this->idParentMenu);
+        return $index ?? 0;
     }
 
     /**
-     * This method update the row in database to store the id parent menu
+     * This method update the row in database to store the id separator parent menu
      * 
-     * @param       int     $rowId              Row id to update
-     * @param       int     $idParentMenu       Id of parent menu to store
+     * @param       int     $rowId                  Row id to update
+     * @param       int     $idSeparatorMenu        Parent menu type used as father of the itens
      * 
      * @return      null
      */
-    private function updateIdParentMenu($rowId, $idParentMenu)
+    private function updateSeparatorMenu($rowId, $idSeparatorMenu)
     {
         $db = Factory::getContainer()->get('DatabaseDriver');
 
@@ -224,7 +313,30 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
 
         $query = $db->getQuery(true);
         $query->update($db->qn($table))
-            ->set($db->qn('id_parent_menu') . " = " . $db->q($idParentMenu))
+            ->set($db->qn('id_separator_menu_item') . " = " . $db->q($idSeparatorMenu))
+            ->where($db->qn('id') . " = " . $db->q($rowId));
+        $db->setQuery($query);
+        $db->execute();
+    }
+
+    /**
+     * This method update the row in database to store the id parent menu
+     * 
+     * @param       int     $rowId              Row id to update
+     * @param       int     $idParentMenuType     Parent menu type used as father of the itens
+     * 
+     * @return      null
+     */
+    private function updateParentMenuType($rowId, $idParentMenuType)
+    {
+        $db = Factory::getContainer()->get('DatabaseDriver');
+
+        $formModel = $this->getModel();
+        $table = $formModel->getTableName();
+
+        $query = $db->getQuery(true);
+        $query->update($db->qn($table))
+            ->set($db->qn('id_parent_menutype') . " = " . $db->q($idParentMenuType))
             ->where($db->qn('id') . " = " . $db->q($rowId));
         $db->setQuery($query);
         $db->execute();
@@ -251,41 +363,29 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
     }
 
     /**
-     * This method get the id of parent menu
-     * 
-     * @return      string
-     */
-    private function getIdParentMenu()
-    {
-        $formModel = $this->getModel();
-        $formData = $formModel->formData;
-
-        return $formData['id_parent_menu'];
-    }
-
-    /**
-     * This method get the id of menu itens
-     * 
-     * @param       int         $index      Index of repeatable line
-     * 
-     * @return      string
-     */
-    private function getIdMenuItem($index)
-    {
-        return $this->getRepeatableData('menu_id', $index);
-    }
-
-    /**
      * This method verify if the parent menu was already created
      * 
      * @return      bool
      */
-    private function parentMenuExists()
+    private function checkParentMenuTypeExists()
     {
         $formModel = $this->getModel();
         $formData = $formModel->formData;
 
-        return !empty($formData['id_parent_menu']);
+        return !empty($formData['id_parent_menutype']);
+    }
+
+    /**
+     * This method verify if the separator parent menu was already created
+     * 
+     * @return      bool
+     */
+    private function checkSeparatorMenuExists()
+    {
+        $formModel = $this->getModel();
+        $formData = $formModel->formData;
+
+        return !empty($formData['id_separator_menu_item']);
     }
 
     /**
@@ -347,7 +447,7 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
      * 
      * @return      int
      */
-    private function countQtnItens($parent_id) 
+    private function countQtnItens($parent_id)
     {
         $db = Factory::getContainer()->get('DatabaseDriver');
 
