@@ -738,7 +738,7 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
         $table = $formModelWebsite->getTableName();
 
         $query = $db->getQuery(true);
-        $query->update($db->qn($website))
+        $query->update($db->qn($table))
             ->set($db->qn('id_separator_menu_item') . " = " . $db->q($idSeparatorMenuItem))
             ->where($db->qn('id') . " = " . $db->q($rowId));
         $db->setQuery($query);
