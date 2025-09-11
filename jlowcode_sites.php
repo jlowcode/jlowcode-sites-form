@@ -1275,6 +1275,7 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
         $opts = array();
         $opts['process'] = $this->checkProcess();
         $opts['newWebsite'] = $this->checkNewWebsite();
+        $opts['emptyUrl'] = $this->isUrlWebsiteEmpty();
         $options = json_encode($opts);
 
         $jsFiles = Array();
@@ -1284,5 +1285,16 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
         $script = "var FabrikJlowcode_sites = new FabrikJlowcode_sites($options);";
 
         FabrikHelperHTML::script($jsFiles, $script);
+    }
+
+    /**
+     * This method return if the website url is empty or not to use in the website form
+     * 
+     */
+    private function isUrlWebsiteEmpty()
+    {
+        $formModel = $this->getModel();
+
+        return $formModel->isNewRecord();
     }
 }

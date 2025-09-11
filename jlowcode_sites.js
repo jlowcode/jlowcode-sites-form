@@ -10,6 +10,10 @@ define(['jquery', 'fab/fabrik'], function (jQuery, Fabrik) {
 	var FabrikJlowcode_sites = new Class({
 		Implements: [Events],
  
+        options: {
+			emptyUrl: true,
+		},
+
         /**
 		 * Initialize
          * 
@@ -39,7 +43,28 @@ define(['jquery', 'fab/fabrik'], function (jQuery, Fabrik) {
         initWebsite: function () {
             var self = this;
             
-            // Future configurations for website form
+            self.setEventFillUrlByTitle()
+        },
+
+        /**
+         * This method configure the event to fill the url when the user is typing the website title
+         * 
+         */
+        setEventFillUrlByTitle: function () {
+			var self = this;
+
+            // Event to fill name_on_list when user type name to form
+			jQuery('#sites___name').on('input', function () {
+				const nameOnList = jQuery('#sites___url');
+
+				if (self.options.emptyUrl) {
+					nameOnList.val(this.value);
+				}
+			});
+
+			jQuery('#sites___url').on('input', function() {
+				self.options.emptyUrl = false;
+			});
         },
 
         /**
@@ -51,7 +76,6 @@ define(['jquery', 'fab/fabrik'], function (jQuery, Fabrik) {
 
             self.setEventsHomePage();
             self.setEventsMenuItensType();
-            self.setEventsMenuList();
 
             self.toggleTypeOptions(jQuery('input[name="itens_do_menu___menu_home_page[]"]:checked').val());
             self.toggleElementsByMenuType(jQuery('#itens_do_menu___menu_type').html());
@@ -104,13 +128,6 @@ define(['jquery', 'fab/fabrik'], function (jQuery, Fabrik) {
             // Event change for type select
             elType.on('change', function() {
                 self.toggleElementsByMenuType(jQuery(this).val());
-            });
-        },
-
-        setEventsMenuList: function() {
-            jQuery('#itens_do_menu___menu_list-auto-complete').on('change', function() {
-                var elMenuType = jQuery('#itens_do_menu___menu_type');
-                elMenuType.val(elMenuType.val()).trigger('change');
             });
         },
 
