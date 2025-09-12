@@ -43,7 +43,7 @@ define(['jquery', 'fab/fabrik'], function (jQuery, Fabrik) {
         initWebsite: function () {
             var self = this;
             
-            self.setEventFillUrlByTitle()
+            self.setEventFillUrlByTitle();
         },
 
         /**
@@ -111,7 +111,6 @@ define(['jquery', 'fab/fabrik'], function (jQuery, Fabrik) {
 
             // Event click for homepage radio button
             elHomePage.on('click', function () {
-                jQuery('#itens_do_menu___menu_type').val('lista').change();
                 var value = jQuery(this).val();
                 self.toggleTypeOptions(value);
             });
@@ -158,7 +157,7 @@ define(['jquery', 'fab/fabrik'], function (jQuery, Fabrik) {
                     elList.closest('.fabrikElementContainer').removeClass('fabrikHide');
                     elLink.closest('.fabrikElementContainer').addClass('fabrikHide');
                     elItem.closest('.fabrikElementContainer').addClass('fabrikHide');
-                    elHomePage.closest('.fabrikElementContainer').addClass('fabrikHide');
+                    elHomePage.closest('.fabrikElementContainer').removeClass('fabrikHide');
                     break;
 
                 case 'Visualização do item':
@@ -166,7 +165,7 @@ define(['jquery', 'fab/fabrik'], function (jQuery, Fabrik) {
                     elList.closest('.fabrikElementContainer').removeClass('fabrikHide');
                     elLink.closest('.fabrikElementContainer').addClass('fabrikHide');
                     elItem.closest('.fabrikElementContainer').removeClass('fabrikHide');
-                    elHomePage.closest('.fabrikElementContainer').addClass('fabrikHide');
+                    elHomePage.closest('.fabrikElementContainer').removeClass('fabrikHide');
                     break;
 
                 case 'Link externo':
@@ -188,9 +187,9 @@ define(['jquery', 'fab/fabrik'], function (jQuery, Fabrik) {
             var elType = jQuery('#itens_do_menu___menu_type');
 
             if(show === '1') {
-                elType.find('option').not('[value="lista"]').hide();
+                elType.find('option').not('[value="lista"], [value="formulario_adicionar"], [value="visualizacao_do_item"]').hide();
             } else {
-                elType.find('option').not('[value="lista"]').show();
+                elType.find('option').not('[value="lista"], [value="formulario_adicionar"], [value="visualizacao_do_item"]').show();
             }
         }
     });

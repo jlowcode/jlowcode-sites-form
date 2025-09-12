@@ -25,6 +25,7 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
     private $componentId;
     private $idParentMenuType;
     private $idSeparatorMenuItem;
+    private $formDataSet;
 
     public function __construct(&$subject, $config = array()) 
     {
@@ -247,6 +248,7 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
             $websiteId = $this->getFormatData('site_raw', $row);
             $idHomeScreen = $this->getNewHomeScreen($websiteId, $allItensToDelete);
             $this->setHomeScreen($idHomeScreen, $websiteId);
+            $this->setSeparatorMenu($idHomeScreen);
         }
 
         match ($menuType) {
@@ -257,6 +259,61 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
         };
 
         $this->deleteMenuItemRow($rowId);
+    }
+
+    /**
+     * This method giving the id row set the row as separator menu item
+     * 
+     * @param       int     $idHomeScreen       Row id to get the data
+     * 
+     * @return      void
+     */
+    private function setSeparatorMenu($idHomeScreen)
+    {
+        $modelMenu = Factory::getApplication()->bootComponent('com_menus')->getMVCFactory()->createModel('Menu', 'Administrator');
+        $modelItem = Factory::getApplication()->bootComponent('com_menus')->getMVCFactory()->createModel('Item', 'Administrator');
+        $listModel = Factory::getApplication()->bootComponent('com_fabrik')->getMVCFactory()->createModel('List', 'FabrikFEModel');
+        $listModelMenuItens = Factory::getApplication()->bootComponent('com_fabrik')->getMVCFactory()->createModel('List', 'FabrikFEModel');
+
+        $listModelMenuItens->setId($this->getIdListMenuItens());
+        $modelMenu->getState(); 	//We need do this to set __state_set before the save
+        $modelItem->getState(); 	//We need do this to set __state_set before the save
+
+        $formData = (array) $listModelMenuItens->getRow($idHomeScreen);
+        $formData = $listModelMenuItens->removeTableNameFromSaveData($formData);
+
+        $this->formDataSet = $formData;
+        $formDataWebsite = $this->getRowWebsite();
+
+        $idMenuType = $this->getFormatData('id_parent_menutype_raw', $formDataWebsite);
+        $menuType = $modelMenu->getItem($idMenuType)->menutype;
+
+        $menuItemType = $this->getFormatData('menu_type_raw', $formData);
+        $id = $this->getFormatData('id_separator_menu_item_raw', $formDataWebsite);
+        $rowId = $this->getFormatData('menu_item_raw', $formData);
+        $listId = $this->getFormatData('menu_list_raw', $formData);
+
+        $dataToSave = match ($menuItemType) {
+            'lista' => $this->handleSeparatorMenuList($listId),
+            'formulario_adicionar' => $this->handleSeparatorMenuForm($listId, $menuType),
+            'visualizacao_do_item' => $this->handleSeparatorMenuDetail($listId, $menuType, $rowId)
+        };
+        $link = $dataToSave['link'] ?? '';
+        $updateClonerLists = $dataToSave['updateClonerLists'] ?? true;
+        $params = $dataToSave['params'] ?? [];
+
+        $data = new stdClass();
+        $data->id = $id;
+        $data->menutype = $menuType;
+        $data->link = $link;
+        $data->params = $params;
+
+        if (!$modelItem->save((array) $data)) {
+			throw new Exception(Text::sprintf('PLG_FABRIK_FORM_JLOWCODE_SITES_ERROR_SAVE_MENU', $modelItem->getError()));
+        }
+
+        $parentId = $this->getFormatData('site_raw', $formData);
+        $this->updateHomeScreen($idHomeScreen, $parentId);
     }
 
     /**
@@ -272,6 +329,10 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
 
         $listId = $this->getFormatData('menu_list_raw', $row);
         $menuId = $this->getFormatData('menu_id_raw', $row);
+
+        if(!isset($menuId)) {
+            return;
+        }
 
         $data = $modelItem->getItem($menuId);
         $data->menutype = 'hide';
@@ -354,6 +415,10 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
     {
         $modelItem = Factory::getApplication()->bootComponent('com_menus')->getMVCFactory()->createModel('Item', 'Administrator');
 
+        if(!isset($menuId)) {
+            return;
+        }
+
         $data = $modelItem->getItem($menuId);
         $data->published = -2;
 
@@ -429,53 +494,61 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
         $app = Factory::getApplication();
         $modelItem = Factory::getApplication()->bootComponent('com_menus')->getMVCFactory()->createModel('Item', 'Administrator');
         $modelMenu = Factory::getApplication()->bootComponent('com_menus')->getMVCFactory()->createModel('Menu', 'Administrator');
+        $listModel = Factory::getApplication()->bootComponent('com_fabrik')->getMVCFactory()->createModel('List', 'FabrikFEModel');
 
         $modelItem->getState(); 	//We need do this to set __state_set before the save
         $modelMenu->getState(); 	//We need do this to set __state_set before the save
 
-        $formModel = $this->getModel();
-        $formData = $formModel->formData;
-
         $formDataWebsite = $this->getRowWebsite();
-        $siteName = $formDataWebsite['name'];
-        $alias = $formDataWebsite['url'] ?? $siteName;
-        $idMenuType = $formDataWebsite['id_parent_menutype'];
+        $siteName = $this->getFormatData('name_raw', $formDataWebsite);
+        $alias = $this->getFormatData('url_raw', $formDataWebsite) ?? $siteName;
+        $idMenuType = $this->getFormatData('id_parent_menutype_raw', $formDataWebsite);
         $menuType = $modelMenu->getItem($idMenuType)->menutype;
 
+        $menuItemType = $this->getFormatData('menu_type_raw');
         $exist = $this->checkSeparatorMenuExists();
-        $id = $exist ? $formDataWebsite['id_separator_menu_item'] : 0;
-        $listId = $this->getFormatData('menu_list');
+        $id = $exist ? $this->getFormatData('id_separator_menu_item_raw', $formDataWebsite) : 0;
+        $listId = $this->getFormatData('menu_list_raw');
+        $websiteId = $this->getFormatData('site_raw');
 
         if(empty($listId)) {
             $app->enqueueMessage(Text::_("PLG_FABRIK_FORM_JLOWCODE_SITES_WARNING_LINK_AS_HOME_PAGE"), 'warning');
 
-            $websiteId = $this->getFormatData('site');
             $idHomeScreen = $this->getIdHomeScreen($websiteId);
             $this->updateHomeScreen($idHomeScreen, $websiteId);
 
             return;
         }
 
+        $dataToSave = match ($menuItemType) {
+            'lista' => $this->handleSeparatorMenuList($listId),
+            'formulario_adicionar' => $this->handleSeparatorMenuForm($listId, $menuType),
+            'visualizacao_do_item' => $this->handleSeparatorMenuDetail($listId, $menuType)
+        };
+        $link = $dataToSave['link'] ?? '';
+        $updateClonerLists = $dataToSave['updateClonerLists'] ?? true;
+        $params = $dataToSave['params'] ?? [];
+
         $data = new stdClass();
         $data->id = $id;
         $data->title = $siteName;
         $data->alias = $alias;
-        $data->link = "index.php?option=com_fabrik&view=list&listid=$listId";
+        $data->link = $link;
         $data->menutype = $menuType;
         $data->type = 'component';
         $data->published = 1;
         $data->parent_id = 1;
         $data->component_id = $this->componentId;
         $data->browserNav = 0;
+        $data->params = $params;
 
         if (!$modelItem->save((array) $data)) {
 			throw new Exception(Text::sprintf('PLG_FABRIK_FORM_JLOWCODE_SITES_ERROR_SAVE_MENU', $modelItem->getError()));
         }
 
 		$this->idSeparatorMenu = $modelItem->getState('item.id');
-        $parentId = $this->getFormatData('site');
-        $this->updateSeparatorMenu($parentId, $this->idSeparatorMenu);
-        $this->updateHomeScreen($formData['id'], $parentId);
+        $this->updateSeparatorMenu($websiteId, $this->idSeparatorMenu);
+        $this->updateHomeScreen($this->getFormatData('id_raw'), $parentId);
     }
 
     /**
@@ -493,10 +566,7 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
         $modelItem->getState(); 	//We need do this to set __state_set before the save
         $modelMenu->getState(); 	//We need do this to set __state_set before the save
         $menu = $app->getMenu();
-
-        $formModel = $this->getModel();
-        $formData = $formModel->getData();
-        $table = $formModel->getTableName();
+        $table = $this->getCurrentTableName();
 
         $formDataWebsite = $this->getRowWebsite();
         $idMenuType = $formDataWebsite['id_parent_menutype'];
@@ -577,14 +647,77 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
     }
 
     /**
+     * This method handle the data to save a separator menu item as a list
+     * 
+     * @param       int         $listId         Id of the related list
+     * 
+     * @return      array
+     */
+    private function handleSeparatorMenuList($listId)
+    {
+        $link = "index.php?option=com_fabrik&view=list&listid=$listId";
+
+        return ['link' => $link];
+    }
+
+    /**
+     * This method handle the data to save a separator menu item as a form view
+     * 
+     * @param       int         $listId         Related list
+     * @param       string      $menuType       Menu type of the menu
+     * 
+     * @return      array
+     */
+    private function handleSeparatorMenuForm($listId, $menuType)
+    {
+        $listModel = Factory::getApplication()->bootComponent('com_fabrik')->getMVCFactory()->createModel('List', 'FabrikFEModel');
+        $listModel->setId($listId);
+
+        $formId = $listModel->getFormModel()->getId();
+        $link = "index.php?option=com_fabrik&view=form&formid=$formId";
+
+        $this->updateListMenuItemForSeparator($listId, $menuType);
+        $updateClonerLists = false;
+
+        return ['link' => $link, 'updateClonerLists' => $updateClonerLists];
+    }
+
+    /**
+     * This method handle the data to save a separator menu item as a detail view
+     * 
+     * @param       int         $listId         Related list
+     * @param       string      $menuType       Menu type of the menu
+     * @param       int         $newRowId       Id to use as the item
+     * 
+     * @return      array
+     */
+    private function handleSeparatorMenuDetail($listId, $menuType, $newRowId=0)
+    {
+        $listModel = Factory::getApplication()->bootComponent('com_fabrik')->getMVCFactory()->createModel('List', 'FabrikFEModel');
+        $listModel->setId($listId);
+
+        $table = $this->getCurrentTableName();
+        $formId = $listModel->getFormModel()->getId();
+        $rowItemId = $this->app->getInput()->getInt("{$table}___menu_item_raw") ?? $newRowId;
+
+        $params = [];
+        $params['rowid'] = $rowItemId;
+        $link = "index.php?option=com_fabrik&view=details&formid=$formId&rowid=$rowItemId";
+
+        $this->updateListMenuItemForSeparator($listId, $menuType);
+        $this->updateMenuItemDetailsView($this->getFormatData('id'), $rowItemId);
+        $updateClonerLists = false;
+
+        return ['link' => $link, 'updateClonerLists' => $updateClonerLists, 'params' => $params];
+    }
+    /**
      * This method verify if the onAfterProcess event is running for website form or menu itens form
      * 
      * @return      string
      */
     private function checkProcess()
     {
-        $formModel = $this->getModel();
-        $table = $formModel->getTableName();
+        $table = $this->getCurrentTableName();
 
         switch ($table) {
             case 'sites':
@@ -721,7 +854,7 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
     }
 
     /**
-     * This method update the row in database to store the id separator parent menu
+     * This method update the row in database to store the id of separator parent menu
      * 
      * @param       int     $rowId                      Row id to update
      * @param       int     $idSeparatorMenuItem        Parent menu type used as father of the itens
@@ -783,8 +916,7 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
     {
         $db = Factory::getContainer()->get('DatabaseDriver');
 
-        $formModel = $this->getModel();
-        $table = $formModel->getTableName();
+        $table = $this->getCurrentTableName();
 
         $query = $db->getQuery(true);
         $query->update($db->qn($table))
@@ -806,8 +938,7 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
     {
         $db = Factory::getContainer()->get('DatabaseDriver');
 
-        $formModel = $this->getModel();
-        $table = $formModel->getTableName();
+        $table = $this->getCurrentTableName();
 
         $query = $db->getQuery(true);
         $query->update($db->qn($table))
@@ -857,12 +988,9 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
         $modelMenu = Factory::getApplication()->bootComponent('com_menus')->getMVCFactory()->createModel('Menu', 'Administrator');
         $modelMenu->getState(); 	//We need do this to set __state_set before the save
 
-        $formModel = $this->getModel();
-        $table = $formModel->getTableName();
-        $formData = $formModel->formData;
-
+        $table = $this->getCurrentTableName();
         $url = $modelMenu->getItem($this->idParentMenuType)->menutype;
-        $id = $formData['id'];
+        $id = $this->getFormatData('id');
 
         if(empty($url) || empty($id)) {
             return;
@@ -877,7 +1005,7 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
     }
 
     /**
-     * This method update the menu item related with a list to add '-list' in the alias to avoid conflict with form menu item.
+     * This method update the menu item related with a list.
      * Also it update the path in adm_cloner_listas table
      * 
      * @param   int     $listId        List id to update
@@ -895,6 +1023,38 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
         $data->menutype = $menuType;
         $data->published = 1;
         $data->parent_id = $this->getParentMenu();
+        $data->params = array(
+            'menu_show' => '0'
+        );
+
+        if (!$modelItem->save((array) $data)) {
+			throw new Exception(Text::sprintf("PLG_FABRIK_FORM_JLOWCODE_SITES_ERROR_UPDATE_LINK_MENU_ITEM", $title, $modelItem->getError()));
+        }
+
+        $itemId = $modelItem->getState('item.id');
+        $this->updateAdmClonerListas($listId, $modelItem->getItem($itemId)->path);
+    }
+
+    /**
+     * This method update the menu item related with a list for the separador menu item.
+     * Also it update the path in adm_cloner_listas table
+     * 
+     * @param   int     $listId        List id to update
+     * @param   string  $menuType      Menu type to set
+     * 
+     * @return  void
+     */
+    private function updateListMenuItemForSeparator($listId, $menuType)
+    {
+        $modelItem = Factory::getApplication()->bootComponent('com_menus')->getMVCFactory()->createModel('Item', 'Administrator');
+        $modelItem->getState(); 	//We need do this to set __state_set before the save
+
+        $link = "index.php?option=com_fabrik&view=list&listid=$listId";
+        $data = $this->getMenuItemByLink($link);
+        $data->alias .= (!str_ends_with($data->alias, '-list') ? '-list' : '');
+        $data->menutype = $menuType;
+        $data->published = 1;
+        $data->parent_id = 1;
         $data->params = array(
             'menu_show' => '0'
         );
@@ -965,7 +1125,6 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
 
     /**
      * This method get from database the current home screen giving a website id
-     * The home screen needs to be a list
      * 
      * @param       int     @websiteId      Id of the website to search the home page
      * 
@@ -975,16 +1134,14 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
     {
         $db = Factory::getContainer()->get('DatabaseDriver');
 
-        $formModel = $this->getModel();
-        $table = $formModel->getTableName();
+        $table = $this->getCurrentTableName();
 
         $query = $db->getQuery(true);
         $query->select($db->qn('id'))
             ->from($db->qn($table))
             ->where($db->qn('site') . " = " . $db->q($websiteId))
             ->where($db->qn('menu_home_page') . ' = ' . $db->q('1'))
-            ->where($db->qn('menu_type') . ' = ' . $db->q('lista'))
-            ->where($db->qn('menu_list') . ' IS NOT NULL');
+            ->where($db->qn('menu_type') . ' IN (' . implode(",", $db->q(['lista', 'visualizacao_do_item', 'formulario_adicionar'])) . ')');
         $db->setQuery($query);
         $id = $db->loadResult();
 
@@ -1001,10 +1158,7 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
         $listModelWebsite = Factory::getApplication()->bootComponent('com_fabrik')->getMVCFactory()->createModel('List', 'FabrikFEModel');
         $listModelWebsite->setId($this->getIdListWebsite());
 
-        $formModel = $this->getModel();
-        $formData = $formModel->formData;
-
-        $parentId = $this->getFormatData('site');
+        $parentId = $this->getFormatData('site_raw');
         $rowWebsite = (array) $listModelWebsite->getRow($parentId);
         $rowWebsite = $listModelWebsite->removeTableNameFromSaveData($rowWebsite);
 
@@ -1046,6 +1200,8 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
 
     /**
      * This method check if data from formData is an array or not and gives the correct value
+     * Important: when the user is deleting something we need set the formData before.
+     * 
      * 
      * @param       string      $param          FormData index to get the value
      * @param       array       $formData       FormData to search
@@ -1058,6 +1214,9 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
             $formModel = $this->getModel();
             $formData = $formModel->formData;
         }
+
+        $formData = $this->formDataSet ?? $formData;
+        $this->formDataSet = null;
 
         $data = $formData[$param];
         $data = is_array($data) ? $data[0] : $data;
@@ -1166,8 +1325,7 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
         $query = $db->getQuery(true);
         $query->select($db->qn('id'))
             ->from($db->qn($table))
-            ->where($db->qn('menu_type') . ' = ' . $db->q('lista'))
-            ->where($db->qn('menu_list') . ' IS NOT NULL')
+            ->where($db->qn('menu_type') . ' IN (' . implode(",", $db->q(['lista', 'visualizacao_do_item', 'formulario_adicionar'])) . ')')
             ->where($db->qn('parent') . ' IS NULL')
             ->where($db->qn('site') . ' = ' . $db->q($websiteId))
             ->order($db->qn('id') . ' ASC');
@@ -1192,6 +1350,19 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
     {
         $doc = Factory::getDocument();
         $doc->addStyleDeclaration('.fb_el_itens_do_menu___menu_item .fabrik.input {padding: 0px}');
+    }
+
+    /**
+     * This method get the current table name
+     * 
+     * @return      string
+     */
+    private function getCurrentTableName()
+    {
+        $formModel = $this->getModel();
+        $table = $formModel->getTableName();
+
+        return $table;
     }
 
     /**
@@ -1240,7 +1411,8 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
 
     /**
 	 * This method search into application for a menu item giving the url
-	 * 
+	 * Remove the menu item id of separator menu
+     * 
      * @param       string      $url            Url to search the related menu item
      * 
 	 * @return		int
@@ -1250,6 +1422,9 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
         $db = Factory::getContainer()->get('DatabaseDriver');
         $app = Factory::getApplication();
 
+        $formDataWebsite = $this->getRowWebsite();
+        $idSeparatorMenuItem = $formDataWebsite['id_separator_menu_item'];
+
 	    $menu = $app->getMenu();
         $query = $db->getQuery(true);
 
@@ -1258,6 +1433,7 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
             ->where($db->qn('link') . ' = ' . $db->q($url))
             ->where($db->qn('component_id') . ' = ' . $db->q($this->componentId))
             ->where($db->qn('type') . ' = ' . $db->q('component'))
+            ->where($db->qn('id') . ' <> ' . $db->q($idSeparatorMenuItem))
             ->order($db->qn('id'));
         $db->setQuery($query);
         $menuId = $db->loadColumn()[0];     // I'm considering that the first one is the menu item that was created by adm_cloner_lists
