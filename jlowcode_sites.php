@@ -601,7 +601,6 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
         $data->component_id = $componentId;
         $data->browserNav = $browserNav;
         $data->params = $params;
-        $data->menuordering = $this->getMenuOrdering();
 
         if (!$modelItem->save((array) $data)) {
 			throw new Exception(Text::sprintf("PLG_FABRIK_FORM_JLOWCODE_SITES_ERROR_SAVE_MENU_ITEM", $title, $modelItem->getError()));
@@ -611,9 +610,33 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
         $itemId = $modelItem->getState('item.id');
 
         $this->updateIdMenuItens($rowId, $itemId);
+        $this->saveOrderingMenuItem($itemId);
 
         if($updateClonerLists) {
             $this->updateAdmClonerListas($listId, $modelItem->getItem($itemId)->path);
+        }
+    }
+
+    /**
+     * This method save the ordering of menu itens after the previous saving
+     * 
+     * @param       int     $itemId         Id of menu item
+     * 
+     * @return      void
+     */
+    private function saveOrderingMenuItem($itemId)
+    {
+        $modelItem = Factory::getApplication()->bootComponent('com_menus')->getMVCFactory()->createModel('Item', 'Administrator');
+
+        if(!$itemId) {
+            return;
+        }
+
+        $data = $modelItem->getItem($itemId);
+        $data->menuordering = $this->getMenuOrdering();
+
+        if (!$modelItem->save((array) $data)) {
+			throw new Exception(Text::sprintf("PLG_FABRIK_FORM_JLOWCODE_SITES_ERROR_SAVE_MENU_ITEM", $data->title, $modelItem->getError()));
         }
     }
 
