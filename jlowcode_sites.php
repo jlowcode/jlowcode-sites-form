@@ -196,36 +196,6 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
     }
 
     /**
-     * This method get all children itens of a given parent id
-     * 
-     * @param       int         $parentId       Parent id to search
-     * @param       string      $table          Table name to search
-     * 
-     * @return      array
-     */
-    private function getChildrenItens($parentId, $table) 
-    {
-        $db = Factory::getContainer()->get('DatabaseDriver');
-        
-        $ids = [];
-
-        $query = $db->getQuery(true)
-            ->select($db->qn('id'))
-            ->from($db->qn($table))
-            ->where($db->qn('parent') . ' = ' . (int) $parentId)
-            ->order($db->qn('id') . ' DESC');
-        $db->setQuery($query);
-        $children = $db->loadObjectList();
-
-        foreach ($children as $child) {
-            $ids = array_merge($ids, $this->getChildrenItens($child->id, $table));
-            $ids[] = $child->id;
-        }
-
-        return $ids;
-    }
-
-    /**
      * This method make the process to delete the menu itens
      * Note: We only move the menu item to hide menu as a parent and it update the path in adm_cloner_lists table
      * 
@@ -631,6 +601,7 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
         $data->component_id = $componentId;
         $data->browserNav = $browserNav;
         $data->params = $params;
+        $data->menuordering = $this->getMenuOrdering();
 
         if (!$modelItem->save((array) $data)) {
 			throw new Exception(Text::sprintf("PLG_FABRIK_FORM_JLOWCODE_SITES_ERROR_SAVE_MENU_ITEM", $title, $modelItem->getError()));
@@ -1363,6 +1334,62 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
         $table = $formModel->getTableName();
 
         return $table;
+    }
+
+        /**
+     * This method get all children itens of a given parent id
+     * 
+     * @param       int         $parentId       Parent id to search
+     * @param       string      $table          Table name to search
+     * 
+     * @return      array
+     */
+    private function getChildrenItens($parentId, $table) 
+    {
+        $db = Factory::getContainer()->get('DatabaseDriver');
+        
+        $ids = [];
+
+        $query = $db->getQuery(true)
+            ->select($db->qn('id'))
+            ->from($db->qn($table))
+            ->where($db->qn('parent') . ' = ' . (int) $parentId)
+            ->order($db->qn('id') . ' DESC');
+        $db->setQuery($query);
+        $children = $db->loadObjectList();
+
+        foreach ($children as $child) {
+            $ids = array_merge($ids, $this->getChildrenItens($child->id, $table));
+            $ids[] = $child->id;
+        }
+
+        return $ids;
+    }
+
+    /**
+     * This method return the menu ordering
+     * To work correctly this feature needs of ordering plugin element
+     * 
+     * @return      int
+     */
+    private function getMenuOrdering()
+    {
+        $listModelMenuItens = Factory::getApplication()->bootComponent('com_fabrik')->getMVCFactory()->createModel('List', 'FabrikFEModel');
+        $listModelMenuItens->setId($this->getIdListMenuItens());
+
+        $rowId = $this->getFormatData('menu_ordering_orig');
+
+        // If first option or nothing was selected then the new menu item will be added as the first one
+        if($rowId == '-1' || !isset($rowId)) {
+            return '-1';
+        }
+
+        $row = (array) $listModelMenuItens->getRow($rowId);
+        $row = $listModelMenuItens->removeTableNameFromSaveData($row);
+
+        $menuId = $this->getFormatData('menu_id', $row);
+
+        return $menuId;
     }
 
     /**
