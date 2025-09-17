@@ -53,12 +53,19 @@ define(['jquery', 'fab/fabrik'], function (jQuery, Fabrik) {
         setEventFillUrlByTitle: function () {
 			var self = this;
 
-            // Event to fill name_on_list when user type name to form
+            // Event to fill url when user type website title
 			jQuery('#sites___name').on('input', function () {
 				const nameOnList = jQuery('#sites___url');
+                let val = this.value
+                    .toLowerCase()
+                    .normalize('NFD')
+                    .replace(/[\u0300-\u036f]/g, '')
+                    .replace(/[^a-z0-9\s-]/g, '')
+                    .trim()
+                    .replace(/\s+/g, '-');
 
-				if (self.options.emptyUrl) {
-					nameOnList.val(this.value);
+				if (self.options.emptyUrl && val.length < 24) {
+					nameOnList.val(val);
 				}
 			});
 
