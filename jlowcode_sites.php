@@ -518,7 +518,7 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
 
 		$this->idSeparatorMenu = $modelItem->getState('item.id');
         $this->updateSeparatorMenu($websiteId, $this->idSeparatorMenu);
-        $this->updateHomeScreen($this->getFormatData('id_raw'), $parentId);
+        $this->updateHomeScreen($this->getFormatData('id_raw'), $websiteId);
     }
 
     /**
@@ -873,7 +873,7 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
     }
 
     /**
-     * This method update the itens table to set all menu itens from the same parent id to zero in menu_home_page column
+     * This method update the itens table to set all menu itens from the same parent id to zero in menu_home_page column except the given rowId
      * 
      * @param       int     $rowId          Row id to not update
      * @param       int     $websiteId      Parent id to update the homescreen
