@@ -578,6 +578,9 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
                 $browserNav = 1;
                 $updateClonerLists = false;
                 break;
+
+            case 'pagina':
+                break;
         }
 
         $data = new stdClass();

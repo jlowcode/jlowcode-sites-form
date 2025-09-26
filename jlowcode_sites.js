@@ -23,8 +23,6 @@ define(['jquery', 'fab/fabrik'], function (jQuery, Fabrik) {
             var self = this;
             self.options = options;
 
-            jQuery("#itens_do_menu___menu_item").closest('.fabrikinput').css('padding', '0px');
-
             switch (options.process) {
                 case 'website':
                     self.initWebsite(options);
@@ -80,6 +78,9 @@ define(['jquery', 'fab/fabrik'], function (jQuery, Fabrik) {
          */
         initItens: function () {
             var self = this;
+
+            jQuery("#itens_do_menu___menu_item").closest('.fabrikinput').css('padding', '0px');
+            jQuery(".fabrikGroup").css('margin-top', '0px');
 
             self.setEventsHomePage();
             self.setEventsMenuItensType();
@@ -149,6 +150,7 @@ define(['jquery', 'fab/fabrik'], function (jQuery, Fabrik) {
             var elLink = jQuery('#itens_do_menu___menu_link');
             var elItem = jQuery('#itens_do_menu___menu_item');
             var elHomePage = jQuery('#itens_do_menu___menu_home_page');
+            var elMenuContent = jQuery('#itens_do_menu___menu_content');
 
             switch (value) {
                 case 'Lista':
@@ -157,6 +159,7 @@ define(['jquery', 'fab/fabrik'], function (jQuery, Fabrik) {
                     elLink.closest('.fabrikElementContainer').addClass('fabrikHide');
                     elItem.closest('.fabrikElementContainer').addClass('fabrikHide');
                     elHomePage.closest('.fabrikElementContainer').removeClass('fabrikHide');
+                    elMenuContent.closest('.fabrikGroup').addClass('fabrikHide');
                     break;
 
                 case 'Formulário adicionar':
@@ -165,6 +168,7 @@ define(['jquery', 'fab/fabrik'], function (jQuery, Fabrik) {
                     elLink.closest('.fabrikElementContainer').addClass('fabrikHide');
                     elItem.closest('.fabrikElementContainer').addClass('fabrikHide');
                     elHomePage.closest('.fabrikElementContainer').removeClass('fabrikHide');
+                    elMenuContent.closest('.fabrikGroup').addClass('fabrikHide');
                     break;
 
                 case 'Visualização do item':
@@ -173,6 +177,7 @@ define(['jquery', 'fab/fabrik'], function (jQuery, Fabrik) {
                     elLink.closest('.fabrikElementContainer').addClass('fabrikHide');
                     elItem.closest('.fabrikElementContainer').removeClass('fabrikHide');
                     elHomePage.closest('.fabrikElementContainer').removeClass('fabrikHide');
+                    elMenuContent.closest('.fabrikGroup').addClass('fabrikHide');
                     break;
 
                 case 'Link externo':
@@ -181,6 +186,16 @@ define(['jquery', 'fab/fabrik'], function (jQuery, Fabrik) {
                     elLink.closest('.fabrikElementContainer').removeClass('fabrikHide');
                     elItem.closest('.fabrikElementContainer').addClass('fabrikHide');
                     elHomePage.closest('.fabrikElementContainer').addClass('fabrikHide');
+                    elMenuContent.closest('.fabrikGroup').addClass('fabrikHide');
+                    break;
+
+                case 'Página':
+                case 'pagina':
+                    elList.closest('.fabrikElementContainer').addClass('fabrikHide');                    
+                    elLink.closest('.fabrikElementContainer').addClass('fabrikHide');
+                    elItem.closest('.fabrikElementContainer').addClass('fabrikHide');
+                    elHomePage.closest('.fabrikElementContainer').removeClass('fabrikHide');
+                    elMenuContent.closest('.fabrikGroup').removeClass('fabrikHide');
                     break;
             }
         },
