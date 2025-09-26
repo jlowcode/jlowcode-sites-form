@@ -50,15 +50,10 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
         $this->setComponentId();
 
         $process = $this->checkProcess();
-        switch ($process) {
-            case 'website':
-                $this->processWebsite();
-                break;
-            
-            case 'itens':
-                $this->processMenuItens();
-                break;
-        }
+        match ($process) {
+            'website' => $this->processWebsite(),
+            'itens' => $this->processMenuItens(),
+        };
     }
 
     /**
@@ -80,16 +75,10 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
 				foreach ($rows as $row) {
                     $row = (array) $row;
 
-                    switch ($process) {
-                        case 'website':
-                            $this->deleteWebsite = true;
-                            $this->deleteWebsite($row);
-                            break;
-
-                        case 'itens':
-                            $this->processDeleteMenuItem($row);
-                            break;
-                    }
+                    match ($process) {
+                        'website' => $this->deleteWebsite($row),
+                        'itens' => $this->processDeleteMenuItem($row),
+                    };
 				}
 			}
 		}
@@ -143,6 +132,8 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
      */
     private function deleteWebsite($row)
     {
+        $this->deleteWebsite = true;
+
         $modelItem = Factory::getApplication()->bootComponent('com_menus')->getMVCFactory()->createModel('Item', 'Administrator');
         $modelMenu = Factory::getApplication()->bootComponent('com_menus')->getMVCFactory()->createModel('Menu', 'Administrator');
         $listModelWebsite = Factory::getApplication()->bootComponent('com_fabrik')->getMVCFactory()->createModel('List', 'FabrikFEModel');
@@ -713,15 +704,11 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
     {
         $table = $this->getCurrentTableName();
 
-        switch ($table) {
-            case 'sites':
-                $process = 'website';
-                break;
-
-            case 'itens_do_menu':
-                $process = 'itens';
-                break;
-        }
+        $process = match ($table) {
+            'sites' => 'website',
+            'itens_do_menu' => 'itens',
+            default => throw new Exception(Text::_("PLG_FABRIK_FORM_JLOWCODE_SITES_ERROR_UNKNOW_TABLE"))
+        };
 
         return $process;
     }
