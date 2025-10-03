@@ -13,6 +13,8 @@ defined('_JEXEC') or die('Restricted access');
 
 use Joomla\CMS\Factory;
 use Joomla\CMS\Language\Text;
+use Joomla\CMS\User\UserFactoryInterface;
+use Joomla\CMS\Uri\Uri;
 
 // Requires 
 // Change to namespaces on F5
@@ -107,6 +109,7 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
     {
         $this->saveMenuType();
         $this->updateUrlWebsite();
+        $this->checkOwnerWebsite();
     }
 
     /**
@@ -952,6 +955,44 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
         $count = $db->loadResult();
 
         return $count > 0;
+    }
+
+    /**
+     * This method check if the owner of the website was changed. If yes, set a message in the session to show after the redirect
+     * 
+     * @return      void
+     */
+    private function checkOwnerWebsite()
+    {
+        $app = Factory::getApplication();
+        $listModelWebsite = $app->bootComponent('com_fabrik')->getMVCFactory()->createModel('List', 'FabrikFEModel');
+        $listModelWebsite->setId($this->getIdListWebsite());
+
+        $formModel = $this->getModel();
+        $params = $formModel->getParams();
+
+        $origData = (array) $formModel->getOrigData()[0];
+        $formData = $formModel->formData;
+
+        $origData = $listModelWebsite->removeTableNameFromSaveData($origData);
+        $formData = $listModelWebsite->removeTableNameFromSaveData($formData);
+
+        $actualUserId = $this->getFormatData('created_by_raw', $origData);
+        $newUserId = $this->getFormatData('created_by_raw', $formData);
+
+        if ($actualUserId == $newUserId) {
+            return;
+        }
+
+        $context = $formModel->getRedirectContext();
+        $newUser = Factory::getContainer()->get(UserFactoryInterface::class)->loadUserById($newUserId);
+
+        // Url redirect to the list view of websites
+        $indexPluginRedirect = array_search('redirect', $params->get('plugins'));
+        $urlRedirect = $params->get('jump_page')->$indexPluginRedirect;
+		$this->session->set($context . 'url', '/'.explode('/', $urlRedirect)[1]);
+
+        $app->enqueueMessage(Text::sprintf("PLG_FABRIK_FORM_JLOWCODE_SITES_CHANGE_OWNER_WEBSITE", $newUser->get('name')), 'success');
     }
 
     /**
