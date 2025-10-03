@@ -15,6 +15,8 @@ use Joomla\CMS\Factory;
 use Joomla\CMS\Language\Text;
 use Joomla\CMS\User\UserFactoryInterface;
 use Joomla\CMS\Uri\Uri;
+use Joomla\String\StringHelper;
+use Joomla\CMS\Application\ApplicationHelper;
 
 // Requires 
 // Change to namespaces on F5
@@ -492,18 +494,28 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
     private function saveSeparatorMenu()
     {
         $app = Factory::getApplication();
-        $modelItem = Factory::getApplication()->bootComponent('com_menus')->getMVCFactory()->createModel('Item', 'Administrator');
-        $modelMenu = Factory::getApplication()->bootComponent('com_menus')->getMVCFactory()->createModel('Menu', 'Administrator');
-        $listModel = Factory::getApplication()->bootComponent('com_fabrik')->getMVCFactory()->createModel('List', 'FabrikFEModel');
+        $modelItem = $app->bootComponent('com_menus')->getMVCFactory()->createModel('Item', 'Administrator');
+        $modelMenu = $app->bootComponent('com_menus')->getMVCFactory()->createModel('Menu', 'Administrator');
+        $listModel = $app->bootComponent('com_fabrik')->getMVCFactory()->createModel('List', 'FabrikFEModel');
 
         $modelItem->getState(); 	//We need do this to set __state_set before the save
         $modelMenu->getState(); 	//We need do this to set __state_set before the save
 
         $formDataWebsite = $this->getRowWebsite();
         $siteName = $this->getFormatData('name_raw', $formDataWebsite);
-        $alias = $this->getFormatData('url_raw', $formDataWebsite) ?? $siteName;
         $idMenuType = $this->getFormatData('id_parent_menutype_raw', $formDataWebsite);
         $menuType = $modelMenu->getItem($idMenuType)->menutype;
+
+        $alias = $this->getFormatData('url_raw
+        /**
+         * This method check if the given alias name already exists in the menu itens table. If yes, add a number at the end to make it unique
+         * 
+         * @param       object      $menuModel      Menu model to load the table
+         * @param       string      $alias          Alias name to check
+         * 
+         * @return      string
+         */', $formDataWebsite) ?? $siteName;
+        $alias = $this->checkAliasNameMenuItem($modelItem, $alias);
 
         $menuItemType = $this->getFormatData('menu_type_raw');
         $exist = $this->checkSeparatorMenuExists();
@@ -581,7 +593,15 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
         $listId = $this->getFormatData('menu_list');
         $title = $this->getFormatData('name');
         $rowId = $this->getFormatData('id');
-        $alias = $title;
+        /**
+         * This method check if the given alias name already exists in the menu itens table. If yes, add a number at the end to make it unique
+         * 
+         * @param       object      $menuModel      Menu model to load the table
+         * @param       string      $alias          Alias name to check
+         * 
+         * @return      string
+         */
+        $alias = $this->checkAliasNameMenuItem($modelItem, $title);
 
         // Default values
         list($id, $type, $componentId, $browserNav, $parentId, $params) = $this->getDefaultValuesForMenuItem();
@@ -1003,6 +1023,26 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
         $currentUser = Factory::getApplication()->getIdentity();
 
         return $ownerId == $currentUser->id || $currentUser->authorise('core.manage');
+    }
+
+    /**
+     * This method check if the given alias name already exists in the menu itens table. If yes, add a number at the end to make it unique
+     * 
+     * @param       object      $menuModel      Menu model to load the table
+     * @param       string      $alias          Alias name to check
+     * 
+     * @return      string
+     */
+    private function checkAliasNameMenuItem($menuModel, $alias)
+    {
+        $alias = ApplicationHelper::stringURLSafe(trim($alias), '*');
+        $table = $menuModel->getTable();
+
+        while ($table->load(['alias' => $alias])) {
+            $alias = StringHelper::increment($alias, 'dash');
+        }
+
+        return $alias;
     }
 
     /**
