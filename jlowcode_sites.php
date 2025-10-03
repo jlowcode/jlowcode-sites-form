@@ -14,6 +14,10 @@ defined('_JEXEC') or die('Restricted access');
 use Joomla\CMS\Factory;
 use Joomla\CMS\Language\Text;
 
+// Requires 
+// Change to namespaces on F5
+require_once JPATH_ADMINISTRATOR . '/components/com_fabrik/models/visualization.php';
+
 /**
  * 	Plugin that displays relevant information form a form when its URL is shared
  * 
@@ -63,13 +67,13 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
 	 * 
 	 * @return      bool
      */
-    public function onDeleteRowsForm(&$groups)
+    public function onBeforeDeleteRowsForm(&$groups)
     {
         $this->setComponentId();
 
         $formModel = $this->getModel();
         $process = $this->checkProcess();
-        
+
         foreach ($groups as $group) {
 			foreach ($group as $rows) {
 				foreach ($rows as $row) {
@@ -216,7 +220,8 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
             'lista' => $this->deleteMenuItemList($row),
             'formulario_adicionar' => $this->deleteMenuItemForm($row),
             'link_externo' => $this->deleteMenuItemLink($row),
-            'visualizacao_do_item' => $this->deleteMenuItemDetailView($row)
+            'visualizacao_do_item' => $this->deleteMenuItemDetailView($row),
+            'pagina' => $this->deleteMenuItemPage($row)
         };
 
         $this->deleteMenuItemRow($rowId);
@@ -251,14 +256,16 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
 
         $menuItemType = $this->getFormatData('menu_type_raw', $formData);
         $id = $this->getFormatData('id_separator_menu_item_raw', $formDataWebsite);
-        $rowId = $this->getFormatData('menu_item_raw', $formData);
+        $rowId = $this->getFormatData('menu_item_raw', $formData) ?? $this->getFormatData('menu_page_raw', $formData);
         $listId = $this->getFormatData('menu_list_raw', $formData);
 
         $dataToSave = match ($menuItemType) {
             'lista' => $this->handleSeparatorMenuList($listId),
             'formulario_adicionar' => $this->handleSeparatorMenuForm($listId, $menuType),
-            'visualizacao_do_item' => $this->handleSeparatorMenuDetail($listId, $menuType, $rowId)
+            'visualizacao_do_item' => $this->handleSeparatorMenuDetail($listId, $menuType, $rowId),
+            'pagina' => $this->handleSeparatorMenuPage($rowId)
         };
+
         $link = $dataToSave['link'] ?? '';
         $updateClonerLists = $dataToSave['updateClonerLists'] ?? true;
         $params = $dataToSave['params'] ?? [];
@@ -336,6 +343,35 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
     private function deleteMenuItemLink($row)
     {
         $menuId = $this->getFormatData('menu_id_raw', $row);
+
+        $this->trashMenuItem($menuId);
+    }
+
+    /**
+     * This method delete the menu item of type page
+     * 
+     * @param       array       $row        Row data
+     * 
+     * @return      void
+     */
+    private function deleteMenuItemPage($row)
+    {
+        $modelVisualization = Factory::getApplication()->bootComponent('com_fabrik')->getMVCFactory()->createModel('Visualization', 'FabrikAdminModel');
+
+        $menuId = $this->getFormatData('menu_id_raw', $row);
+        $visualizationId = $this->getFormatData('menu_page_raw', $row);
+
+        if(!isset($visualizationId)) {
+            return;
+        }
+
+        $data = $modelVisualization->getItem($visualizationId);
+        $data->published = -2;
+
+        $modelVisualization->getState(); 	//We need do this to set __state_set before the save
+        if (!$modelVisualization->save((array) $data)) {
+            throw new Exception(Text::sprintf("PLG_FABRIK_FORM_JLOWCODE_SITES_ERROR_DELETE_MENU_ITEM", $modelVisualization->getError()));
+        }
 
         $this->trashMenuItem($menuId);
     }
@@ -471,8 +507,9 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
         $id = $exist ? $this->getFormatData('id_separator_menu_item_raw', $formDataWebsite) : 0;
         $listId = $this->getFormatData('menu_list_raw');
         $websiteId = $this->getFormatData('site_raw');
+        $rowId = $this->getFormatData('id_raw');
 
-        if(empty($listId)) {
+        if($menuItemType == 'link') {
             $app->enqueueMessage(Text::_("PLG_FABRIK_FORM_JLOWCODE_SITES_WARNING_LINK_AS_HOME_PAGE"), 'warning');
 
             $idHomeScreen = $this->getIdHomeScreen($websiteId);
@@ -484,8 +521,10 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
         $dataToSave = match ($menuItemType) {
             'lista' => $this->handleSeparatorMenuList($listId),
             'formulario_adicionar' => $this->handleSeparatorMenuForm($listId, $menuType),
-            'visualizacao_do_item' => $this->handleSeparatorMenuDetail($listId, $menuType)
+            'visualizacao_do_item' => $this->handleSeparatorMenuDetail($listId, $menuType),
+            'pagina' => $this->preHandleSeparatorMenuPage($websiteId)
         };
+
         $link = $dataToSave['link'] ?? '';
         $updateClonerLists = $dataToSave['updateClonerLists'] ?? true;
         $params = $dataToSave['params'] ?? [];
@@ -509,7 +548,7 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
 
 		$this->idSeparatorMenu = $modelItem->getState('item.id');
         $this->updateSeparatorMenu($websiteId, $this->idSeparatorMenu);
-        $this->updateHomeScreen($this->getFormatData('id_raw'), $websiteId);
+        $this->updateHomeScreen($rowId, $websiteId);
     }
 
     /**
@@ -530,13 +569,15 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
         $table = $this->getCurrentTableName();
 
         $formDataWebsite = $this->getRowWebsite();
-        $idMenuType = $formDataWebsite['id_parent_menutype'];
+        $idMenuType = $this->getFormatData('id_parent_menutype_raw', $formDataWebsite);
+        $websiteId = $this->getFormatData('id_raw', $formDataWebsite);
         $menuType = $modelMenu->getItem($idMenuType)->menutype;
 
         $updateClonerLists = true;
         $menuItemType = $this->getFormatData('menu_type');
         $listId = $this->getFormatData('menu_list');
         $title = $this->getFormatData('name');
+        $rowId = $this->getFormatData('id');
         $alias = $title;
 
         // Default values
@@ -566,7 +607,7 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
                 $link = "index.php?option=com_fabrik&view=details&formid=$formId&rowid=$rowItemId";
 
                 $this->updateListMenuItem($listId, $menuType);
-                $this->updateMenuItemDetailsView($this->getFormatData('id'), $rowItemId);
+                $this->updateMenuItemDetailsView($rowId, $rowItemId);
                 $alias = $title . '-details';
                 $updateClonerLists = false;
                 break;
@@ -580,6 +621,8 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
                 break;
 
             case 'pagina':
+                $idVisualization = $this->saveVisualizationPage($websiteId);
+                $link = "index.php?option=com_fabrik&view=visualization&id=$idVisualization";
                 break;
         }
 
@@ -600,7 +643,6 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
 			throw new Exception(Text::sprintf("PLG_FABRIK_FORM_JLOWCODE_SITES_ERROR_SAVE_MENU_ITEM", $title, $modelItem->getError()));
         }
 
-        $rowId = $this->getFormatData('id');
         $itemId = $modelItem->getState('item.id');
 
         $this->updateIdMenuItens($rowId, $itemId);
@@ -632,6 +674,46 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
         if (!$modelItem->save((array) $data)) {
 			throw new Exception(Text::sprintf("PLG_FABRIK_FORM_JLOWCODE_SITES_ERROR_SAVE_MENU_ITEM", $data->title, $modelItem->getError()));
         }
+    }
+
+    /**
+     * This method create a visualization page using the element menu_content
+     *
+     * @param       int         $websiteId      Id of the website
+     *
+     * @return      int
+     */
+    private function saveVisualizationPage($websiteId)
+    {
+        $modelVisualization = Factory::getApplication()->bootComponent('com_fabrik')->getMVCFactory()->createModel('Visualization', 'FabrikAdminModel');
+
+        if(!$websiteId) {
+            return 0;
+        }
+
+        $html = $this->getFormatData('menu_content');
+        $idVisualization = $this->getFormatData('menu_page') ?? 0;
+        $rowId = $this->getFormatData('id');
+        $label = $this->getFormatData('name');
+
+        $opts['id'] = $idVisualization;
+        $opts['label'] = Text::sprintf('PLG_FABRIK_FORM_JLOWCODE_SITES_LABEL_PLUGIN_VISUALIZATION', $label, $websiteId);
+        $opts['plugin'] = 'jlowcode_websites_pages';
+        $opts['published'] = '1';
+        $opts['params'] = [
+            'jlowcode_sites_pages_html' => $html,
+            'website_id' => $websiteId
+        ];
+
+        $modelVisualization->getState(); 	//We need do this to set __state_set before the save
+        if (!$modelVisualization->save($opts)) {
+			throw new Exception(Text::sprintf("PLG_FABRIK_FORM_JLOWCODE_SITES_ERROR_SAVE_MENU_ITEM", $opts['label'], $modelVisualization->getError()));
+        }
+
+        $idVisualization = $modelVisualization->getState('visualization.id');
+        $this->updateMenuPageId($rowId, $idVisualization);
+
+        return $idVisualization;
     }
 
     /**
@@ -698,9 +780,44 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
 
         return ['link' => $link, 'updateClonerLists' => $updateClonerLists, 'params' => $params];
     }
+
+    /**
+     * This method save a visualization and execute the handle function
+     *
+     * @param       int         $websiteId      Website id to check
+     *
+     * @return      null
+     */
+    private function preHandleSeparatorMenuPage($websiteId)
+    {
+        $idVisualization = $this->saveVisualizationPage($websiteId);
+
+        return $this->handleSeparatorMenuPage($idVisualization);
+    }
+
+    /**
+     * This method handle the data to save a separator menu item as a page
+     *
+     * @param       int         $newIdVisualization       Id to use as the item
+     *
+     * @return      array
+     */
+    private function handleSeparatorMenuPage($newIdVisualization = 0)
+    {
+        $idVisualization = $this->getFormatData('menu_page') ?? $newIdVisualization;
+
+        $link = "index.php?option=com_fabrik&view=visualization&id=$idVisualization&isHome=true";
+        $updateClonerLists = false;
+        $params = [];
+
+        $this->updateMenuPageId($this->getFormatData('id'), $idVisualization);
+
+        return ['link' => $link, 'updateClonerLists' => $updateClonerLists, 'params' => $params];
+    }
+
     /**
      * This method verify if the onAfterProcess event is running for website form or menu itens form
-     * 
+     *
      * @return      string
      */
     private function checkProcess()
@@ -737,7 +854,7 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
     private function checkSeparatorMenuExists()
     {
         $rowWebsite = $this->getRowWebsite();
-        $exists = !empty($rowWebsite['id_separator_menu_item']);
+        $exists = !empty($this->getFormatData('id_separator_menu_item', $rowWebsite));
 
         return $exists;
     }
@@ -1022,11 +1139,11 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
     /**
      * This method update the menu item related with a list for the separador menu item.
      * Also it update the path in adm_cloner_listas table
-     * 
-     * @param   int     $listId        List id to update
-     * @param   string  $menuType      Menu type to set
-     * 
-     * @return  void
+     *
+     * @param       int     $listId        List id to update
+     * @param       string  $menuType      Menu type to set
+     *
+     * @return      void
      */
     private function updateListMenuItemForSeparator($listId, $menuType)
     {
@@ -1071,6 +1188,31 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
         $query = $db->getQuery(true);
         $query->update($db->qn($table))
             ->set($db->qn('menu_item') . " = " . $db->q($idItemDetailsView))
+            ->where($db->qn('id') . " = " . $db->q($rowId));
+        $db->setQuery($query);
+        $db->execute();
+    }
+
+    /**
+     * This method update the row in database to store the menu page id
+     *
+     * @param       int     $rowId         Row id to update
+     * @param       int     $pageId        Id of the visualization plugin
+     *
+     * @return      void
+     */
+    private function updateMenuPageId($rowId, $pageId)
+    {
+        $db = Factory::getContainer()->get('DatabaseDriver');
+        $listModelMenuItens = Factory::getApplication()->bootComponent('com_fabrik')->getMVCFactory()->createModel('List', 'FabrikFEModel');
+        $listModelMenuItens->setId($this->getIdListMenuItens());
+
+        $formModelMenuItens = $listModelMenuItens->getFormModel();
+        $table = $formModelMenuItens->getTableName();
+
+        $query = $db->getQuery(true);
+        $query->update($db->qn($table))
+            ->set($db->qn('menu_page') . " = " . $db->q($pageId))
             ->where($db->qn('id') . " = " . $db->q($rowId));
         $db->setQuery($query);
         $db->execute();
@@ -1125,7 +1267,7 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
             ->from($db->qn($table))
             ->where($db->qn('site') . " = " . $db->q($websiteId))
             ->where($db->qn('menu_home_page') . ' = ' . $db->q('1'))
-            ->where($db->qn('menu_type') . ' IN (' . implode(",", $db->q(['lista', 'visualizacao_do_item', 'formulario_adicionar'])) . ')');
+            ->where($db->qn('menu_type') . ' IN (' . implode(",", $db->q(['lista', 'visualizacao_do_item', 'formulario_adicionar', 'pagina'])) . ')');
         $db->setQuery($query);
         $id = $db->loadResult();
 
@@ -1309,7 +1451,7 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
         $query = $db->getQuery(true);
         $query->select($db->qn('id'))
             ->from($db->qn($table))
-            ->where($db->qn('menu_type') . ' IN (' . implode(",", $db->q(['lista', 'visualizacao_do_item', 'formulario_adicionar'])) . ')')
+            ->where($db->qn('menu_type') . ' IN (' . implode(",", $db->q(['lista', 'visualizacao_do_item', 'formulario_adicionar', 'pagina'])) . ')')
             ->where($db->qn('parent') . ' IS NULL')
             ->where($db->qn('site') . ' = ' . $db->q($websiteId))
             ->order($db->qn('id') . ' ASC');

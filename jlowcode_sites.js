@@ -81,6 +81,7 @@ define(['jquery', 'fab/fabrik'], function (jQuery, Fabrik) {
 
             jQuery("#itens_do_menu___menu_item").closest('.fabrikinput').css('padding', '0px');
             jQuery(".fabrikGroup").css('margin-top', '0px');
+            jQuery(".fabrikGroup").css('display', 'inherit');
 
             self.setEventsHomePage();
             self.setEventsMenuItensType();
@@ -209,9 +210,9 @@ define(['jquery', 'fab/fabrik'], function (jQuery, Fabrik) {
             var elType = jQuery('#itens_do_menu___menu_type');
 
             if(show === '1') {
-                elType.find('option').not('[value="lista"], [value="formulario_adicionar"], [value="visualizacao_do_item"]').hide();
+                elType.find('option').not('[value="lista"], [value="pagina"], [value="formulario_adicionar"], [value="visualizacao_do_item"]').hide();
             } else {
-                elType.find('option').not('[value="lista"], [value="formulario_adicionar"], [value="visualizacao_do_item"]').show();
+                elType.find('option').not('[value="lista"], [value="pagina"], [value="formulario_adicionar"], [value="visualizacao_do_item"]').show();
             }
         }
     });
