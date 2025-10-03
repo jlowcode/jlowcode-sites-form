@@ -972,13 +972,10 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
         $params = $formModel->getParams();
 
         $origData = (array) $formModel->getOrigData()[0];
-        $formData = $formModel->formData;
-
         $origData = $listModelWebsite->removeTableNameFromSaveData($origData);
-        $formData = $listModelWebsite->removeTableNameFromSaveData($formData);
 
         $actualUserId = $this->getFormatData('created_by_raw', $origData);
-        $newUserId = $this->getFormatData('created_by_raw', $formData);
+        $newUserId = $this->getWebsiteOwnerId();
 
         if ($actualUserId == $newUserId || !isset($actualUserId)) {
             return;
@@ -993,6 +990,19 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
 		$this->session->set($context . 'url', '/'.explode('/', $urlRedirect)[1]);
 
         $app->enqueueMessage(Text::sprintf("PLG_FABRIK_FORM_JLOWCODE_SITES_CHANGE_OWNER_WEBSITE", $newUser->get('name')), 'success');
+    }
+
+    /**
+     * This method check if the current user can add itens to the website menu
+     * 
+     * @return      bool
+     */
+    private function checkCanAddItem()
+    {
+        $ownerId = $this->getWebsiteOwnerId();
+        $currentUser = Factory::getApplication()->getIdentity();
+
+        return $ownerId == $currentUser->id || $currentUser->authorise('core.manage');
     }
 
     /**
@@ -1589,6 +1599,25 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
     }
 
     /**
+     * This method get the user id that is the owner of the website
+     * 
+     * @return      int
+     */
+    private function getWebsiteOwnerId()
+    {
+        $listModelWebsite = Factory::getApplication()->bootComponent('com_fabrik')->getMVCFactory()->createModel('List', 'FabrikFEModel');
+        $listModelWebsite->setId($this->getIdListWebsite());
+
+        $formModel = $this->getModel();
+        $formData = $formModel->getData();
+        $formData = $listModelWebsite->removeTableNameFromSaveData($formData);
+
+        $userId = $this->getFormatData('created_by_raw', $formData);
+
+        return $userId;
+    }
+
+    /**
      * This method set component id for use in menu model
      * 
      * @return      void
@@ -1675,6 +1704,7 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
         $opts['process'] = $this->checkProcess();
         $opts['newWebsite'] = $this->checkNewWebsite();
         $opts['emptyUrl'] = $this->isUrlWebsiteEmpty();
+        $opts['canAddItem'] = $this->checkCanAddItem();
         $options = json_encode($opts);
 
         $jsFiles = Array();

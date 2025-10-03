@@ -42,6 +42,7 @@ define(['jquery', 'fab/fabrik'], function (jQuery, Fabrik) {
             var self = this;
             
             self.setEventFillUrlByTitle();
+            self.checkAccessToAddItens();
         },
 
         /**
@@ -214,6 +215,16 @@ define(['jquery', 'fab/fabrik'], function (jQuery, Fabrik) {
             } else {
                 elType.find('option').not('[value="lista"], [value="pagina"], [value="formulario_adicionar"], [value="visualizacao_do_item"]').show();
             }
+        },
+
+        checkAccessToAddItens: function() {
+            var self = this;
+
+            if(self.options.canAddItem) {
+                return;
+            }
+
+            jQuery('.addbutton').parent().remove();
         }
     });
 
