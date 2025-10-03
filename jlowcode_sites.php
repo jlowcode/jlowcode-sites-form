@@ -980,7 +980,7 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
         $actualUserId = $this->getFormatData('created_by_raw', $origData);
         $newUserId = $this->getFormatData('created_by_raw', $formData);
 
-        if ($actualUserId == $newUserId) {
+        if ($actualUserId == $newUserId || !isset($actualUserId)) {
             return;
         }
 
