@@ -32,7 +32,6 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
 {
     private $componentId;
     private $idParentMenuType;
-    private $idSeparatorMenuItem;
     private $formDataSet;
 
     public function __construct(&$subject, $config = array()) 
@@ -496,7 +495,6 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
         $app = Factory::getApplication();
         $modelItem = $app->bootComponent('com_menus')->getMVCFactory()->createModel('Item', 'Administrator');
         $modelMenu = $app->bootComponent('com_menus')->getMVCFactory()->createModel('Menu', 'Administrator');
-        $listModel = $app->bootComponent('com_fabrik')->getMVCFactory()->createModel('List', 'FabrikFEModel');
 
         $modelItem->getState(); 	//We need do this to set __state_set before the save
         $modelMenu->getState(); 	//We need do this to set __state_set before the save
@@ -506,23 +504,15 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
         $idMenuType = $this->getFormatData('id_parent_menutype_raw', $formDataWebsite);
         $menuType = $modelMenu->getItem($idMenuType)->menutype;
 
-        $alias = $this->getFormatData('url_raw
-        /**
-         * This method check if the given alias name already exists in the menu itens table. If yes, add a number at the end to make it unique
-         * 
-         * @param       object      $menuModel      Menu model to load the table
-         * @param       string      $alias          Alias name to check
-         * 
-         * @return      string
-         */', $formDataWebsite) ?? $siteName;
-        $alias = $this->checkAliasNameMenuItem($modelItem, $alias);
-
         $menuItemType = $this->getFormatData('menu_type_raw');
         $exist = $this->checkSeparatorMenuExists();
         $id = $exist ? $this->getFormatData('id_separator_menu_item_raw', $formDataWebsite) : 0;
         $listId = $this->getFormatData('menu_list_raw');
         $websiteId = $this->getFormatData('site_raw');
         $rowId = $this->getFormatData('id_raw');
+
+        $alias = $this->getFormatData('url_raw', $formDataWebsite) ?? $siteName;
+        $alias = $this->checkAliasNameMenuItem($modelItem, $alias, !$exist);
 
         if($menuItemType == 'link') {
             $app->enqueueMessage(Text::_("PLG_FABRIK_FORM_JLOWCODE_SITES_WARNING_LINK_AS_HOME_PAGE"), 'warning');
@@ -541,7 +531,6 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
         };
 
         $link = $dataToSave['link'] ?? '';
-        $updateClonerLists = $dataToSave['updateClonerLists'] ?? true;
         $params = $dataToSave['params'] ?? [];
 
         $data = new stdClass();
@@ -580,7 +569,6 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
 
         $modelItem->getState(); 	//We need do this to set __state_set before the save
         $modelMenu->getState(); 	//We need do this to set __state_set before the save
-        $menu = $app->getMenu();
         $table = $this->getCurrentTableName();
 
         $formDataWebsite = $this->getRowWebsite();
@@ -593,15 +581,8 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
         $listId = $this->getFormatData('menu_list');
         $title = $this->getFormatData('name');
         $rowId = $this->getFormatData('id');
-        /**
-         * This method check if the given alias name already exists in the menu itens table. If yes, add a number at the end to make it unique
-         * 
-         * @param       object      $menuModel      Menu model to load the table
-         * @param       string      $alias          Alias name to check
-         * 
-         * @return      string
-         */
-        $alias = $this->checkAliasNameMenuItem($modelItem, $title);
+        $exist = $this->checkMenuItemExists();
+        $alias = $this->checkAliasNameMenuItem($modelItem, $title, !$exist);
 
         // Default values
         list($id, $type, $componentId, $browserNav, $parentId, $params) = $this->getDefaultValuesForMenuItem();
@@ -755,13 +736,15 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
 
     /**
      * This method handle the data to save a separator menu item as a form view
-     * 
-     * @param       int         $listId         Related list
-     * @param       string      $menuType       Menu type of the menu
-     * 
-     * @return      array
+     *
+     * @param int $listId Related list
+     * @param string $menuType Menu type of the menu
+     *
+     * @return array
+     * @throws Exception
+     * @since v1.0.0
      */
-    private function handleSeparatorMenuForm($listId, $menuType)
+    private function handleSeparatorMenuForm(int $listId, string $menuType): array
     {
         $listModel = Factory::getApplication()->bootComponent('com_fabrik')->getMVCFactory()->createModel('List', 'FabrikFEModel');
         $listModel->setId($listId);
@@ -770,19 +753,21 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
         $link = "index.php?option=com_fabrik&view=form&formid=$formId";
 
         $this->updateListMenuItemForSeparator($listId, $menuType);
-        $updateClonerLists = false;
 
-        return ['link' => $link, 'updateClonerLists' => $updateClonerLists];
+        return ['link' => $link, 'updateClonerLists' => false];
     }
 
     /**
      * This method handle the data to save a separator menu item as a detail view
-     * 
-     * @param       int         $listId         Related list
-     * @param       string      $menuType       Menu type of the menu
-     * @param       int         $newRowId       Id to use as the item
-     * 
+     *
+     * @param int $listId Related list
+     * @param string $menuType Menu type of the menu
+     * @param int $newRowId Id to use as the item
+     *
      * @return      array
+     *
+     * @throws Exception
+     * @since       v1.0.0
      */
     private function handleSeparatorMenuDetail($listId, $menuType, $newRowId=0)
     {
@@ -932,14 +917,12 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
      */
     private function checkMenuItemId($url)
     {
-        $listId = $this->getFormatData('menu_list');
         $exist = $this->checkMenuItemExists();
         $menuItem = $this->getMenuItemByLink($url);
 
         $id = $menuItem->id ?? 0;
-        $id = $exist ? $this->getFormatData('menu_id') : $id;
 
-        return $id;
+        return $exist ? $this->getFormatData('menu_id') : $id;
     }
 
     /**
@@ -1030,11 +1013,16 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
      * 
      * @param       object      $menuModel      Menu model to load the table
      * @param       string      $alias          Alias name to check
+     * @param       bool        $isNew          Are we editing or adding?
      * 
      * @return      string
      */
-    private function checkAliasNameMenuItem($menuModel, $alias)
+    private function checkAliasNameMenuItem($menuModel, $alias, $isNew)
     {
+        if(!$isNew) {
+            return $alias;
+        }
+
         $alias = ApplicationHelper::stringURLSafe(trim($alias), '*');
         $table = $menuModel->getTable();
 
@@ -1418,8 +1406,7 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
     /**
      * This method check if data from formData is an array or not and gives the correct value
      * Important: when the user is deleting something we need set the formData before.
-     * 
-     * 
+     *
      * @param       string      $param          FormData index to get the value
      * @param       array       $formData       FormData to search
      * 
