@@ -24,36 +24,52 @@ require_once JPATH_ADMINISTRATOR . '/components/com_fabrik/models/visualization.
 
 /**
  * 	Plugin that displays relevant information form a form when its URL is shared
- * 
+ *
  * @package     	Joomla.Plugin
  * @subpackage  	Fabrik.form.jlowcode_sites
+ * @since v1.0.0
  */
-class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form 
+class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
 {
-    private $componentId;
-    private $idParentMenuType;
-    private $formDataSet;
+    /**
+     * @var int
+     * @since v1.0.0
+     */
+    private int $componentId;
 
-    public function __construct(&$subject, $config = array()) 
+    /**
+     * @var int
+     * @since v1.0.0
+     */
+    private int $idParentMenuType;
+
+    /**
+     * @var array
+     * @since v1.0.0
+     */
+    private array $formDataSet;
+
+    /**
+     * @var true
+     * @since v1.0.0
+     */
+    private bool $deleteWebsite;
+
+    public function __construct(&$subject, $config = array())
     {
         parent::__construct($subject, $config);
     }
 
     /**
-	 * Run right at the end of the form processing
-	 * form needs to be set to record in database for this to hook to be called
-	 * 
-	 * @return	bool
-	 */
-    public function onAfterProcess()
+     * Run right at the end of the form processing
+     * form needs to be set to record in database for this to hook to be called
+     *
+     * @return void
+     * @throws Exception
+     * @since v1.0.0
+     */
+    public function onAfterProcess(): void
     {
-        $db = Factory::getContainer()->get('DatabaseDriver');
-        $app = Factory::getApplication();
-        $user = $app->getIdentity();
-
-        $formModel = $this->getModel();
-        $formData = $formModel->formData;
-
         $this->setComponentId();
 
         $process = $this->checkProcess();
@@ -65,16 +81,17 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
 
     /**
      * This method remove the menu itens created
-     * 
-	 * @param       array       &$groups        List data for deletion
-	 * 
-	 * @return      bool
+     *
+     * @param array       &$groups List data for deletion
+     *
+     * @return void
+     * @throws Exception
+     * @since v1.0.0
      */
-    public function onBeforeDeleteRowsForm(&$groups)
+    public function onBeforeDeleteRowsForm(array &$groups): void
     {
         $this->setComponentId();
 
-        $formModel = $this->getModel();
         $process = $this->checkProcess();
 
         foreach ($groups as $group) {
@@ -92,21 +109,25 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
     }
 
     /**
-	 * Function called when the plugin loads
-	 *
-	 * @return  	void
-	 */
-    public function onLoad()
+     * Function called when the plugin loads
+     *
+     * @return    void
+     * @throws Exception
+     * @since v1.0.0
+     */
+    public function onLoad(): void
     {
         $this->loadJS();
     }
 
     /**
      * This method process for website form
-     * 
-     * @return      void
+     *
+     * @return void
+     * @throws Exception
+     * @since v1.0.0
      */
-    private function processWebsite()
+    private function processWebsite(): void
     {
         $this->saveMenuType();
         $this->updateUrlWebsite();
@@ -115,10 +136,12 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
 
     /**
      * This method process for menu itens form
-     * 
-     * @return      void
+     *
+     * @return void
+     * @throws Exception
+     * @since v1.0.0
      */
-    private function processMenuItens()
+    private function processMenuItens(): void
     {
         $formModel = $this->getModel();
         $formData = $formModel->formData;
@@ -133,12 +156,14 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
     /**
      * This method make the process to delete the menu itens
      * Note: We delete the menu type and separator menu item, but the menu menu itens me only call deleteMenuItem method to handle it
-     * 
-     * @param       array       $row        Row to delete
-     * 
-     * @return      void
+     *
+     * @param array $row Row to delete
+     *
+     * @return void
+     * @throws Exception
+     * @since v1.0.0
      */
-    private function deleteWebsite($row)
+    private function deleteWebsite(array $row): void
     {
         $this->deleteWebsite = true;
 
@@ -169,22 +194,23 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
 
     /**
      * This method get all menu itens related with the given website id and delete them
-     * 
-     * @param       array       $row        Row to delete
-     * 
-     * @return      void
+     *
+     * @param array $row Row to delete
+     *
+     * @return void
+     * @throws Exception
+     * @since v1.0.0
      */
-    private function processDeleteMenuItem($row)
+    private function processDeleteMenuItem(array $row): void
     {
         $listModelMenuItens = Factory::getApplication()->bootComponent('com_fabrik')->getMVCFactory()->createModel('List', 'FabrikFEModel');
         $listModelMenuItens->setId($this->getIdListMenuItens());
-        
+
         $formModelMenuItens = $listModelMenuItens->getFormModel();
         $table = $formModelMenuItens->getTableName();
 
         $row = $listModelMenuItens->removeTableNameFromSaveData($row);
         $rowId = $this->getFormatData('id_raw', $row);
-        $menuId = $this->getFormatData('menu_id_raw', $row);
 
         $itemsToDelete = $this->getChildrenItens($rowId, $table);
         $itemsToDelete[] = $rowId;
@@ -196,13 +222,16 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
 
     /**
      * This method make the process to delete the menu itens
-     * Note: We only move the menu item to hide menu as a parent and it update the path in adm_cloner_lists table
-     * 
-     * @param       array       $row        Row to delete
-     * 
+     * Note: We only move the menu item to hide menu as a parent, and it updates the path in adm_cloner_lists table
+     *
+     * @param int $rowId Row to delete
+     * @param array $allItensToDelete Itens to delete
+     *
      * @return      void
+     * @throws Exception
+     * @since v1.0.0
      */
-    private function deleteMenuItem($rowId, $allItensToDelete)
+    private function deleteMenuItem(int $rowId, array $allItensToDelete): void
     {
         $listModelMenuItens = Factory::getApplication()->bootComponent('com_fabrik')->getMVCFactory()->createModel('List', 'FabrikFEModel');
         $listModelMenuItens->setId($this->getIdListMenuItens());
@@ -233,9 +262,9 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
 
     /**
      * This method giving the id row set the row as separator menu item
-     * 
+     *
      * @param       int     $idHomeScreen       Row id to get the data
-     * 
+     *
      * @return      void
      */
     private function setSeparatorMenu($idHomeScreen)
@@ -290,9 +319,9 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
 
     /**
      * This method delete the menu item of type list
-     * 
+     *
      * @param       array       $row        Row data
-     * 
+     *
      * @return      void
      */
     private function deleteMenuItemList($row)
@@ -320,9 +349,9 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
 
     /**
      * This method delete the menu item of type form
-     * 
+     *
      * @param       array       $row        Row data
-     * 
+     *
      * @return      void
      */
     private function deleteMenuItemForm($row)
@@ -339,9 +368,9 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
 
     /**
      * This method delete the menu item of type external link
-     * 
+     *
      * @param       array       $row        Row data
-     * 
+     *
      * @return      void
      */
     private function deleteMenuItemLink($row)
@@ -353,9 +382,9 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
 
     /**
      * This method delete the menu item of type page
-     * 
+     *
      * @param       array       $row        Row data
-     * 
+     *
      * @return      void
      */
     private function deleteMenuItemPage($row)
@@ -382,9 +411,9 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
 
     /**
      * This method delete the menu item of type detail view
-     * 
+     *
      * @param       array       $row        Row data
-     * 
+     *
      * @return      void
      */
     private function deleteMenuItemDetailView($row)
@@ -405,11 +434,11 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
 
     /**
      * This method move the menu item to trash
-     * 
+     *
      * @param       int     $menuId     Menu id to move to trash
-     * 
+     *
      * @return      void
-     * 
+     *
      * @throws      Exception
      */
     private function trashMenuItem($menuId)
@@ -430,11 +459,11 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
     }
 
     /**
-     * This method delete the menu item row from database. 
+     * This method delete the menu item row from database.
      * We cant use deleteRows from list model because it call the same event and make a loop
-     * 
+     *
      * @param       int     $id     Id to delete
-     * 
+     *
      * @return      void
      */
     private function deleteMenuItemRow($id)
@@ -455,7 +484,7 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
 
     /**
      * This method create or update the menu type to use as a father for the menu itens
-     * 
+     *
      * @return      void
      */
     private function saveMenuType()
@@ -487,7 +516,7 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
 
     /**
      * This method create or update the parent menu to use like a separator
-     * 
+     *
      * @return      void
      */
     private function saveSeparatorMenu()
@@ -557,7 +586,7 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
 
     /**
      * This method create or updated the menu itens related with parent menu
-     * 
+     *
      * @return      void
      */
     private function saveMenuItem()
@@ -659,9 +688,9 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
 
     /**
      * This method save the ordering of menu itens after the previous saving
-     * 
+     *
      * @param       int     $itemId         Id of menu item
-     * 
+     *
      * @return      void
      */
     private function saveOrderingMenuItem($itemId)
@@ -722,9 +751,9 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
 
     /**
      * This method handle the data to save a separator menu item as a list
-     * 
+     *
      * @param       int         $listId         Id of the related list
-     * 
+     *
      * @return      array
      */
     private function handleSeparatorMenuList($listId)
@@ -843,7 +872,7 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
 
     /**
      * This method verify if the parent menu was already created
-     * 
+     *
      * @return      bool
      */
     private function checkParentMenuTypeExists()
@@ -856,7 +885,7 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
 
     /**
      * This method verify if the separator parent menu was already created
-     * 
+     *
      * @return      bool
      */
     private function checkSeparatorMenuExists()
@@ -869,7 +898,7 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
 
     /**
      * This method verify if the menu item was already created
-     * 
+     *
      * @return      bool
      */
     private function checkMenuItemExists()
@@ -882,7 +911,7 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
 
     /**
      * This method verify if the given website has menu itens or not
-     * 
+     *
      */
     private function checkNewWebsite()
     {
@@ -910,9 +939,9 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
 
     /**
      * This method check if the given list was created before as a menu item
-     * 
+     *
      * @param       int     $listId     List id to check
-     * 
+     *
      * @return      int
      */
     private function checkMenuItemId($url)
@@ -927,11 +956,11 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
 
     /**
      * This method check if exists another menu item of type detail view for the same list in the same website
-     * 
+     *
      * @param       int         $websiteId      Website id to check
      * @param       int         $listId         List id to check
      * @param       array       $excludeIds     Array of ids to exclude from the search
-     * 
+     *
      * @return      bool
      */
     private function checkMenuItemDetailsViewExists($websiteId, $listId, $excludeIds = array())
@@ -962,7 +991,7 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
 
     /**
      * This method check if the owner of the website was changed. If yes, set a message in the session to show after the redirect
-     * 
+     *
      * @return      void
      */
     private function checkOwnerWebsite()
@@ -997,7 +1026,7 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
 
     /**
      * This method check if the current user can add itens to the website menu
-     * 
+     *
      * @return      bool
      */
     private function checkCanAddItem()
@@ -1010,11 +1039,11 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
 
     /**
      * This method check if the given alias name already exists in the menu itens table. If yes, add a number at the end to make it unique
-     * 
+     *
      * @param       object      $menuModel      Menu model to load the table
      * @param       string      $alias          Alias name to check
      * @param       bool        $isNew          Are we editing or adding?
-     * 
+     *
      * @return      string
      */
     private function checkAliasNameMenuItem($menuModel, $alias, $isNew)
@@ -1035,10 +1064,10 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
 
     /**
      * This method update the row in database to store the id of separator parent menu
-     * 
+     *
      * @param       int     $rowId                      Row id to update
      * @param       int     $idSeparatorMenuItem        Parent menu type used as father of the itens
-     * 
+     *
      * @return      void
      */
     private function updateSeparatorMenu($rowId, $idSeparatorMenuItem)
@@ -1060,10 +1089,10 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
 
     /**
      * This method update the itens table to set all menu itens from the same parent id to zero in menu_home_page column except the given rowId
-     * 
+     *
      * @param       int     $rowId          Row id to not update
      * @param       int     $websiteId      Parent id to update the homescreen
-     * 
+     *
      * @return      void
      */
     private function updateHomeScreen($rowId, $websiteId)
@@ -1086,10 +1115,10 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
 
     /**
      * This method update the row in database to store the id parent menu
-     * 
+     *
      * @param       int     $rowId              Row id to update
      * @param       int     $idParentMenuType     Parent menu type used as father of the itens
-     * 
+     *
      * @return      void
      */
     private function updateParentMenuType($rowId, $idParentMenuType)
@@ -1108,10 +1137,10 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
 
     /**
      * This method update the row in database to store the id parent menu
-     * 
+     *
      * @param       int     $rowId        Row id to update
      * @param       int     $idItem       Id of menu item to store
-     * 
+     *
      * @return      void
      */
     private function updateIdMenuItens($rowId, $idItem)
@@ -1130,10 +1159,10 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
 
     /**
      * This method update the path in adm_cloner_listas table using menu id
-     * 
+     *
      * @param       int     $listId     List id to update in adm_cloner_listas table
      * @param       int     $path       New path to update in adm_cloner_listas table
-     * 
+     *
      * @return      void
      */
     private function updateAdmClonerListas($listId, $path)
@@ -1159,7 +1188,7 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
 
     /**
      * This method get the website alias and update the table to redirect correctly
-     * 
+     *
      * @return      void
      */
     private function updateUrlWebsite()
@@ -1187,10 +1216,10 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
     /**
      * This method update the menu item related with a list.
      * Also it update the path in adm_cloner_listas table
-     * 
+     *
      * @param   int     $listId        List id to update
      * @param   string  $menuType      Menu type to set
-     * 
+     *
      * @return  void
      */
     private function updateListMenuItem($listId, $menuType)
@@ -1208,7 +1237,7 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
         );
 
         if (!$modelItem->save((array) $data)) {
-			throw new Exception(Text::sprintf("PLG_FABRIK_FORM_JLOWCODE_SITES_ERROR_UPDATE_LINK_MENU_ITEM", $title, $modelItem->getError()));
+			throw new Exception(Text::sprintf("PLG_FABRIK_FORM_JLOWCODE_SITES_ERROR_UPDATE_LINK_MENU_ITEM", $modelItem->getError()));
         }
 
         $itemId = $modelItem->getState('item.id');
@@ -1240,7 +1269,7 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
         );
 
         if (!$modelItem->save((array) $data)) {
-			throw new Exception(Text::sprintf("PLG_FABRIK_FORM_JLOWCODE_SITES_ERROR_UPDATE_LINK_MENU_ITEM", $title, $modelItem->getError()));
+			throw new Exception(Text::sprintf("PLG_FABRIK_FORM_JLOWCODE_SITES_ERROR_UPDATE_LINK_MENU_ITEM", $modelItem->getError()));
         }
 
         $itemId = $modelItem->getState('item.id');
@@ -1249,10 +1278,10 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
 
     /**
      * This method update the row in database to store the menu item
-     * 
+     *
      * @param       int     $rowId                      Row id to update
      * @param       int     $idSeparatorMenuItem        Parent menu type used as father of the itens
-     * 
+     *
      * @return      void
      */
     private function updateMenuItemDetailsView($rowId, $idItemDetailsView)
@@ -1299,9 +1328,9 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
 
     /**
      * This method giving a website id returns all menu itens related
-     * 
+     *
      * @param       int         $websiteId      Id of the website to search menu itens rows
-     * 
+     *
      * @return      array
      */
     private function getMenuItensWebsite($websiteId)
@@ -1330,9 +1359,9 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
 
     /**
      * This method get from database the current home screen giving a website id
-     * 
+     *
      * @param       int     @websiteId      Id of the website to search the home page
-     * 
+     *
      * @return      int
      */
     private function getIdHomeScreen($websiteId)
@@ -1355,7 +1384,7 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
 
     /**
      * This method return the website row for current menu item
-     * 
+     *
      * @return array
      */
     private function getRowWebsite()
@@ -1372,16 +1401,17 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
 
     /**
      * This method get the parent menu id from the current row
-     * 
-     * @return      mixed
+     *
+     * @return mixed
+     * @throws Exception
+     * @since v1.0.0
      */
-    private function getParentMenu()
+    private function getParentMenu(): mixed
     {
         $listModelWebsite = Factory::getApplication()->bootComponent('com_fabrik')->getMVCFactory()->createModel('List', 'FabrikFEModel');
         $listModelWebsite->setId($this->getIdListWebsite());
 
         $formModel = $this->getModel();
-        $formData = $formModel->formData;
         $listModel = $formModel->getListModel();
 
         $parentId = $this->getFormatData('parent');
@@ -1397,7 +1427,7 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
         $parentId = $parentMenuId ?? $idSeparatorMenuItem;
 
         if(!$parentId) {
-			throw new Exception(Text::sprintf("PLG_FABRIK_FORM_JLOWCODE_SITES_ERROR_SAVE_MENU_ITEM", $title, Text::_("PLG_FABRIK_FORM_JLOWCODE_SITES_ERROR_PARENT_NOT_FOUND")));
+			throw new Exception(Text::sprintf("PLG_FABRIK_FORM_JLOWCODE_SITES_ERROR_SAVE_MENU_ITEM", Text::_("PLG_FABRIK_FORM_JLOWCODE_SITES_ERROR_PARENT_NOT_FOUND")));
         }
 
         return $parentId;
@@ -1407,20 +1437,21 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
      * This method check if data from formData is an array or not and gives the correct value
      * Important: when the user is deleting something we need set the formData before.
      *
-     * @param       string      $param          FormData index to get the value
-     * @param       array       $formData       FormData to search
-     * 
-     * @return      mixed
+     * @param string $param FormData index to get the value
+     * @param bool|array $formData FormData to search
+     *
+     * @return mixed
+     * @since v1.0.0
      */
-    private function getFormatData($param, $formData=false)
+    private function getFormatData(string $param, bool|array $formData=false): mixed
     {
         if($formData === false) {
             $formModel = $this->getModel();
             $formData = $formModel->formData;
         }
 
-        $formData = $this->formDataSet ?? $formData;
-        $this->formDataSet = null;
+        $formData = !empty($this->formDataSet) ? $this->formDataSet : $formData;
+        $this->formDataSet = array();
 
         $data = $formData[$param];
         $data = is_array($data) ? $data[0] : $data;
@@ -1430,10 +1461,11 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
 
     /**
      * This method get the id of the website list
-     * 
-     * @return      int
+     *
+     * @return  int
+     * @since v1.0.0
      */
-    private function getIdListWebsite()
+    private function getIdListWebsite(): int
     {
         $db = Factory::getContainer()->get('DatabaseDriver');
 
@@ -1442,17 +1474,17 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
             ->from($db->qn('#__fabrik_lists'))
             ->where($db->qn('db_table_name') . ' = ' . $db->q('sites'));
         $db->setQuery($query);
-        $websitesListId = $db->loadResult();
 
-        return $websitesListId;
+        return $db->loadResult();
     }
 
     /**
      * This method get the id of the menu itens list
-     * 
-     * @return      int
+     *
+     * @return int
+     * @since v1.0.0
      */
-    private function getIdListMenuItens()
+    private function getIdListMenuItens(): int
     {
         $db = Factory::getContainer()->get('DatabaseDriver');
 
@@ -1461,17 +1493,18 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
             ->from($db->qn('#__fabrik_lists'))
             ->where($db->qn('db_table_name') . ' = ' . $db->q('itens_do_menu'));
         $db->setQuery($query);
-        $menuItensListId = $db->loadResult();
 
-        return $menuItensListId;
+        return $db->loadResult();
     }
 
     /**
      * This method get the default values to create a menu item
-     * 
-     * @return      array
+     *
+     * @return array
+     * @throws Exception
+     * @since v1.0.0
      */
-    private function getDefaultValuesForMenuItem()
+    private function getDefaultValuesForMenuItem(): array
     {
         $id = 0;
         $type = 'component';
@@ -1485,24 +1518,24 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
 
     /**
      * This method get a menu item given the link
-     * 
-     * @param       string      $url        Url to search the related menu item
-     * 
-     * @return      mixed
+     *
+     * @param string $url Url to search the related menu item
+     *
+     * @return mixed
+     * @throws Exception
+     * @since v1.0.0
      */
-    private function getMenuItemByLink($url)
+    private function getMenuItemByLink(string $url): mixed
     {
         $modelItem = Factory::getApplication()->bootComponent('com_menus')->getMVCFactory()->createModel('Item', 'Administrator');
         $modelItem->getState(); 	//We need do this to set __state_set before the save
 
         $menuItemId = $this->searchMenuItem($url);
         if($menuItemId === null) {
-            return;
+            return null;
         }
 
-        $menuItem = $modelItem->getItem($menuItemId);
-
-        return $menuItem;
+        return $modelItem->getItem($menuItemId);
     }
 
     /**
@@ -1511,13 +1544,15 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
      * 1 - it is not in the given array
      * 2 - it is not a child item
      * 3 - it is the first one created
-     * 
-     * @param       int     $websiteId          Id of the website to search the home page
-     * @param       array   $cantBeTheseIds     Array of ids that cant be
-     * 
-     * @return      int
+     *
+     * @param int $websiteId Id of the website to search the home page
+     * @param array $cantBeTheseIds Array of ids that cant be
+     *
+     * @return int
+     * @throws Exception
+     * @since v1.0.0
      */
-    private function getNewHomeScreen($websiteId, $cantBeTheseIds)
+    private function getNewHomeScreen(int $websiteId, array $cantBeTheseIds): int
     {
         $db = Factory::getContainer()->get('DatabaseDriver');
         $listModelMenuItens = Factory::getApplication()->bootComponent('com_fabrik')->getMVCFactory()->createModel('List', 'FabrikFEModel');
@@ -1548,9 +1583,10 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
     /**
 	 * Sets up HTML to be injected into the form's bottom
 	 *
-	 * @return      void
+	 * @return void
+     * @since v1.0.0
 	 */
-    public function getBottomContent()
+    public function getBottomContent(): void
     {
         $doc = Factory::getDocument();
         $doc->addStyleDeclaration('.fb_el_itens_do_menu___menu_item .fabrik.input {padding: 0px}');
@@ -1558,29 +1594,29 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
 
     /**
      * This method get the current table name
-     * 
-     * @return      string
+     *
+     * @return string
+     * @since v1.0.0
      */
-    private function getCurrentTableName()
+    private function getCurrentTableName(): string
     {
         $formModel = $this->getModel();
-        $table = $formModel->getTableName();
 
-        return $table;
+        return $formModel->getTableName();
     }
 
-        /**
+    /**
      * This method get all children itens of a given parent id
-     * 
-     * @param       int         $parentId       Parent id to search
-     * @param       string      $table          Table name to search
-     * 
-     * @return      array
+     *
+     * @param int $parentId       Parent id to search
+     * @param string $table          Table name to search
+     *
+     * @return array
+     * @since v1.0.0
      */
-    private function getChildrenItens($parentId, $table) 
+    private function getChildrenItens(int $parentId, string $table): array
     {
         $db = Factory::getContainer()->get('DatabaseDriver');
-        
         $ids = [];
 
         $query = $db->getQuery(true)
@@ -1602,10 +1638,12 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
     /**
      * This method return the menu ordering
      * To work correctly this feature needs of ordering plugin element
-     * 
-     * @return      int
+     *
+     * @return int
+     * @throws Exception
+     * @since v1.0.0
      */
-    private function getMenuOrdering()
+    private function getMenuOrdering(): int
     {
         $listModelMenuItens = Factory::getApplication()->bootComponent('com_fabrik')->getMVCFactory()->createModel('List', 'FabrikFEModel');
         $listModelMenuItens->setId($this->getIdListMenuItens());
@@ -1614,23 +1652,23 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
 
         // If first option or nothing was selected then the new menu item will be added as the first one
         if($rowId == '-1' || !isset($rowId)) {
-            return '-1';
+            return -1;
         }
 
         $row = (array) $listModelMenuItens->getRow($rowId);
         $row = $listModelMenuItens->removeTableNameFromSaveData($row);
 
-        $menuId = $this->getFormatData('menu_id', $row);
-
-        return $menuId;
+        return $this->getFormatData('menu_id', $row);
     }
 
     /**
      * This method get the user id that is the owner of the website
-     * 
-     * @return      int
+     *
+     * @return int
+     * @throws Exception
+     * @since v1.0.0
      */
-    private function getWebsiteOwnerId()
+    private function getWebsiteOwnerId(): int
     {
         $listModelWebsite = Factory::getApplication()->bootComponent('com_fabrik')->getMVCFactory()->createModel('List', 'FabrikFEModel');
         $listModelWebsite->setId($this->getIdListWebsite());
@@ -1639,17 +1677,16 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
         $formData = $formModel->getData();
         $formData = $listModelWebsite->removeTableNameFromSaveData($formData);
 
-        $userId = $this->getFormatData('created_by_raw', $formData);
-
-        return $userId;
+        return $this->getFormatData('created_by_raw', $formData);
     }
 
     /**
      * This method set component id for use in menu model
-     * 
-     * @return      void
+     *
+     * @return void
+     * @since v1.0.0
      */
-    private function setComponentId()
+    private function setComponentId(): void
     {
         $db = Factory::getContainer()->get('DatabaseDriver');
 
@@ -1664,13 +1701,15 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
 
     /**
      * This method set the menu_home_page column to 1 for the given row id
-     * 
-     * @param       int     $rowId          Row id to not update
-     * @param       int     $websiteId      Parent id to update the homescreen
-     * 
-     * @return      void
+     *
+     * @param int $rowId Row id to not update
+     * @param int $websiteId Parent id to update the homescreen
+     *
+     * @return void
+     * @throws Exception
+     * @since v1.0.0
      */
-    private function setHomeScreen($rowId, $websiteId)
+    private function setHomeScreen(int $rowId, int $websiteId): void
     {
         $db = Factory::getContainer()->get('DatabaseDriver');
         $listModelMenuItens = Factory::getApplication()->bootComponent('com_fabrik')->getMVCFactory()->createModel('List', 'FabrikFEModel');
@@ -1689,15 +1728,17 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
     }
 
     /**
-	 * This method search into application for a menu item giving the url
-	 * Remove the menu item id of separator menu
-     * 
-     * @param       string      $url            Url to search the related menu item
-     * 
-	 * @return		int
-	 */
-	private function searchMenuItem($url)
-	{
+     * This method search into application for a menu item giving the url
+     * Remove the menu item id of separator menu
+     *
+     * @param string $url Url to search the related menu item
+     *
+     * @return int
+     * @throws Exception
+     * @since v1.0.0
+     */
+	private function searchMenuItem(string $url): int
+    {
         $db = Factory::getContainer()->get('DatabaseDriver');
         $app = Factory::getApplication();
 
@@ -1715,17 +1756,19 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
             ->where($db->qn('id') . ' <> ' . $db->q($idSeparatorMenuItem))
             ->order($db->qn('id'));
         $db->setQuery($query);
-        $menuId = $db->loadColumn()[0];     // I'm considering that the first one is the menu item that was created by adm_cloner_lists
 
-		return $menuId;
+        // I'm considering that the first one is the menu item that was created by adm_cloner_lists
+		return $db->loadColumn()[0];
 	}
 
     /**
      * Load the javascript files of the plugin.
      *
-     * @return  void
+     * @return void
+     * @throws Exception
+     * @since v1.0.0
      */
-    protected function loadJS()
+    protected function loadJS(): void
     {
         $opts = array();
         $opts['process'] = $this->checkProcess();
@@ -1745,9 +1788,11 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
 
     /**
      * This method return if the website url is empty or not to use in the website form
-     * 
+     *
+     * @return bool
+     * @since v1.0.0
      */
-    private function isUrlWebsiteEmpty()
+    private function isUrlWebsiteEmpty(): bool
     {
         $formModel = $this->getModel();
 
