@@ -1664,11 +1664,11 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
     /**
      * This method get the user id that is the owner of the website
      *
-     * @return int
+     * @return null|int
      * @throws Exception
      * @since v1.0.0
      */
-    private function getWebsiteOwnerId(): int
+    private function getWebsiteOwnerId(): null|int
     {
         $listModelWebsite = Factory::getApplication()->bootComponent('com_fabrik')->getMVCFactory()->createModel('List', 'FabrikFEModel');
         $listModelWebsite->setId($this->getIdListWebsite());
@@ -1733,11 +1733,11 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
      *
      * @param string $url Url to search the related menu item
      *
-     * @return int
+     * @return null|int
      * @throws Exception
      * @since v1.0.0
      */
-	private function searchMenuItem(string $url): int
+	private function searchMenuItem(string $url): null|int
     {
         $db = Factory::getContainer()->get('DatabaseDriver');
         $app = Factory::getApplication();
