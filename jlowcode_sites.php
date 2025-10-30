@@ -14,7 +14,6 @@ defined('_JEXEC') or die('Restricted access');
 use Joomla\CMS\Factory;
 use Joomla\CMS\Language\Text;
 use Joomla\CMS\User\UserFactoryInterface;
-use Joomla\CMS\Uri\Uri;
 use Joomla\String\StringHelper;
 use Joomla\CMS\Application\ApplicationHelper;
 
@@ -263,9 +262,11 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
     /**
      * This method giving the id row set the row as separator menu item
      *
-     * @param       int     $idHomeScreen       Row id to get the data
+     * @param int $idHomeScreen Row id to get the data
      *
-     * @return      void
+     * @return void
+     * @throws Exception
+     * @since v2.0.0
      */
     private function setSeparatorMenu($idHomeScreen)
     {
@@ -320,9 +321,11 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
     /**
      * This method delete the menu item of type list
      *
-     * @param       array       $row        Row data
+     * @param array $row Row data
      *
-     * @return      void
+     * @return void
+     * @throws Exception
+     * @since v2.0.0
      */
     private function deleteMenuItemList($row)
     {
@@ -350,9 +353,11 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
     /**
      * This method delete the menu item of type form
      *
-     * @param       array       $row        Row data
+     * @param array $row Row data
      *
-     * @return      void
+     * @return void
+     * @throws Exception
+     * @since v2.0.0
      */
     private function deleteMenuItemForm($row)
     {
@@ -369,9 +374,11 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
     /**
      * This method delete the menu item of type external link
      *
-     * @param       array       $row        Row data
+     * @param array $row Row data
      *
-     * @return      void
+     * @return void
+     * @throws Exception
+     * @since v2.0.0
      */
     private function deleteMenuItemLink($row)
     {
@@ -383,9 +390,11 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
     /**
      * This method delete the menu item of type page
      *
-     * @param       array       $row        Row data
+     * @param array $row Row data
      *
-     * @return      void
+     * @return void
+     * @throws Exception
+     * @since v2.0.0
      */
     private function deleteMenuItemPage($row)
     {
@@ -412,9 +421,11 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
     /**
      * This method delete the menu item of type detail view
      *
-     * @param       array       $row        Row data
+     * @param array $row Row data
      *
-     * @return      void
+     * @return void
+     * @throws Exception
+     * @since v2.0.0
      */
     private function deleteMenuItemDetailView($row)
     {
@@ -435,11 +446,11 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
     /**
      * This method move the menu item to trash
      *
-     * @param       int     $menuId     Menu id to move to trash
+     * @param int $menuId Menu id to move to trash
      *
-     * @return      void
-     *
-     * @throws      Exception
+     * @return void
+     * @throws Exception
+     * @since v2.0.0
      */
     private function trashMenuItem($menuId)
     {
@@ -460,11 +471,13 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
 
     /**
      * This method delete the menu item row from database.
-     * We cant use deleteRows from list model because it call the same event and make a loop
+     * We cant use deleteRows from list model because it calls the same event and make a loop
      *
-     * @param       int     $id     Id to delete
+     * @param int $id Id to delete
      *
-     * @return      void
+     * @return void
+     * @throws Exception
+     * @since v2.0.0
      */
     private function deleteMenuItemRow($id)
     {
