@@ -925,8 +925,11 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
     /**
      * This method verify if the given website has menu itens or not
      *
+     * @return bool
+     * @throws Exception
+     * @since v2.0.0
      */
-    private function checkNewWebsite()
+    private function checkNewWebsite(): bool
     {
         $db = Factory::getContainer()->get('DatabaseDriver');
         $listModelMenuItens = Factory::getApplication()->bootComponent('com_fabrik')->getMVCFactory()->createModel('List', 'FabrikFEModel');
@@ -953,9 +956,11 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
     /**
      * This method check if the given list was created before as a menu item
      *
-     * @param       int     $listId     List id to check
+     * @param string $url Url to check
      *
-     * @return      int
+     * @return int
+     * @throws Exception
+     * @since v2.0.0
      */
     private function checkMenuItemId($url)
     {
@@ -970,13 +975,15 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
     /**
      * This method check if exists another menu item of type detail view for the same list in the same website
      *
-     * @param       int         $websiteId      Website id to check
-     * @param       int         $listId         List id to check
-     * @param       array       $excludeIds     Array of ids to exclude from the search
+     * @param int $websiteId Website id to check
+     * @param int $listId List id to check
+     * @param array $excludeIds Array of ids to exclude from the search
      *
-     * @return      bool
+     * @return bool
+     * @throws Exception
+     * @since v2.0.0
      */
-    private function checkMenuItemDetailsViewExists($websiteId, $listId, $excludeIds = array())
+    private function checkMenuItemDetailsViewExists($websiteId, $listId, $excludeIds = array()): bool
     {
         $db = Factory::getContainer()->get('DatabaseDriver');
         $listModelMenuItens = Factory::getApplication()->bootComponent('com_fabrik')->getMVCFactory()->createModel('List', 'FabrikFEModel');
@@ -1005,9 +1012,11 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
     /**
      * This method check if the owner of the website was changed. If yes, set a message in the session to show after the redirect
      *
-     * @return      void
+     * @return void
+     * @throws Exception
+     * @since v2.0.0
      */
-    private function checkOwnerWebsite()
+    private function checkOwnerWebsite(): void
     {
         $app = Factory::getApplication();
         $listModelWebsite = $app->bootComponent('com_fabrik')->getMVCFactory()->createModel('List', 'FabrikFEModel');
@@ -1040,9 +1049,11 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
     /**
      * This method check if the current user can add itens to the website menu
      *
-     * @return      bool
+     * @return bool
+     * @throws Exception
+     * @since v2.0.0
      */
-    private function checkCanAddItem()
+    private function checkCanAddItem(): bool
     {
         $ownerId = $this->getWebsiteOwnerId();
         $currentUser = Factory::getApplication()->getIdentity();
@@ -1053,15 +1064,16 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
     /**
      * This method check if the given alias name already exists in the menu itens table. If yes, add a number at the end to make it unique
      *
-     * @param       object      $menuModel      Menu model to load the table
-     * @param       string      $alias          Alias name to check
-     * @param       bool        $isNew          Are we editing or adding?
+     * @param object $menuModel Menu model to load the table
+     * @param string $alias Alias name to check
+     * @param bool $isNew Are we editing or adding?
      *
-     * @return      string
+     * @return string
+     * @since 2.0.0
      */
-    private function checkAliasNameMenuItem($menuModel, $alias, $isNew)
+    private function checkAliasNameMenuItem($menuModel, $alias, $isNew): string
     {
-        if(!$isNew) {
+        if (!$isNew) {
             return $alias;
         }
 
@@ -1078,12 +1090,14 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
     /**
      * This method update the row in database to store the id of separator parent menu
      *
-     * @param       int     $rowId                      Row id to update
-     * @param       int     $idSeparatorMenuItem        Parent menu type used as father of the itens
+     * @param int $rowId Row id to update
+     * @param int $idSeparatorMenuItem Parent menu type used as father of the itens
      *
-     * @return      void
+     * @return void
+     * @throws Exception
+     * @since v2.0.0
      */
-    private function updateSeparatorMenu($rowId, $idSeparatorMenuItem)
+    private function updateSeparatorMenu($rowId, $idSeparatorMenuItem): void
     {
         $db = Factory::getContainer()->get('DatabaseDriver');
         $listModelWebsite = Factory::getApplication()->bootComponent('com_fabrik')->getMVCFactory()->createModel('List', 'FabrikFEModel');
@@ -1103,12 +1117,14 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
     /**
      * This method update the itens table to set all menu itens from the same parent id to zero in menu_home_page column except the given rowId
      *
-     * @param       int     $rowId          Row id to not update
-     * @param       int     $websiteId      Parent id to update the homescreen
+     * @param int $rowId Row id to not update
+     * @param int $websiteId Parent id to update the homescreen
      *
-     * @return      void
+     * @return void
+     * @throws Exception
+     * @since v2.0.0
      */
-    private function updateHomeScreen($rowId, $websiteId)
+    private function updateHomeScreen($rowId, $websiteId): void
     {
         $db = Factory::getContainer()->get('DatabaseDriver');
         $listModelMenuItens = Factory::getApplication()->bootComponent('com_fabrik')->getMVCFactory()->createModel('List', 'FabrikFEModel');
@@ -1129,12 +1145,13 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
     /**
      * This method update the row in database to store the id parent menu
      *
-     * @param       int     $rowId              Row id to update
-     * @param       int     $idParentMenuType     Parent menu type used as father of the itens
+     * @param int $rowId Row id to update
+     * @param int $idParentMenuType Parent menu type used as father of the itens
      *
-     * @return      void
+     * @return void
+     * @since v2.0.0
      */
-    private function updateParentMenuType($rowId, $idParentMenuType)
+    private function updateParentMenuType($rowId, $idParentMenuType): void
     {
         $db = Factory::getContainer()->get('DatabaseDriver');
 
@@ -1151,12 +1168,13 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
     /**
      * This method update the row in database to store the id parent menu
      *
-     * @param       int     $rowId        Row id to update
-     * @param       int     $idItem       Id of menu item to store
+     * @param int $rowId Row id to update
+     * @param int $idItem Id of menu item to store
      *
-     * @return      void
+     * @return void
+     * @since v2.0.0
      */
-    private function updateIdMenuItens($rowId, $idItem)
+    private function updateIdMenuItens($rowId, $idItem): void
     {
         $db = Factory::getContainer()->get('DatabaseDriver');
 
@@ -1173,12 +1191,14 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
     /**
      * This method update the path in adm_cloner_listas table using menu id
      *
-     * @param       int     $listId     List id to update in adm_cloner_listas table
-     * @param       int     $path       New path to update in adm_cloner_listas table
+     * @param int $listId List id to update in adm_cloner_listas table
+     * @param int $path New path to update in adm_cloner_listas table
      *
-     * @return      void
+     * @return void
+     * @throws Exception
+     * @since v2.0.0
      */
-    private function updateAdmClonerListas($listId, $path)
+    private function updateAdmClonerListas($listId, $path): void
     {
         $db = Factory::getContainer()->get('DatabaseDriver');
         $app = Factory::getApplication();
@@ -1202,9 +1222,11 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
     /**
      * This method get the website alias and update the table to redirect correctly
      *
-     * @return      void
+     * @return void
+     * @throws Exception
+     * @since v2.0.0
      */
-    private function updateUrlWebsite()
+    private function updateUrlWebsite(): void
     {
         $db = Factory::getContainer()->get('DatabaseDriver');
         $modelMenu = Factory::getApplication()->bootComponent('com_menus')->getMVCFactory()->createModel('Menu', 'Administrator');
@@ -1228,14 +1250,16 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
 
     /**
      * This method update the menu item related with a list.
-     * Also it update the path in adm_cloner_listas table
+     * Also, it update the path in adm_cloner_listas table
      *
-     * @param   int     $listId        List id to update
-     * @param   string  $menuType      Menu type to set
+     * @param int $listId List id to update
+     * @param string $menuType Menu type to set
      *
-     * @return  void
+     * @return void
+     * @throws Exception
+     * @since 2.0.0
      */
-    private function updateListMenuItem($listId, $menuType)
+    private function updateListMenuItem($listId, $menuType): void
     {
         $modelItem = Factory::getApplication()->bootComponent('com_menus')->getMVCFactory()->createModel('Item', 'Administrator');
         $modelItem->getState(); 	//We need do this to set __state_set before the save
@@ -1259,14 +1283,16 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
 
     /**
      * This method update the menu item related with a list for the separador menu item.
-     * Also it update the path in adm_cloner_listas table
+     * Also, it update the path in adm_cloner_listas table
      *
-     * @param       int     $listId        List id to update
-     * @param       string  $menuType      Menu type to set
+     * @param int $listId List id to update
+     * @param string $menuType Menu type to set
      *
-     * @return      void
+     * @return void
+     * @throws Exception
+     * @since v2.0.0
      */
-    private function updateListMenuItemForSeparator($listId, $menuType)
+    private function updateListMenuItemForSeparator($listId, $menuType): void
     {
         $modelItem = Factory::getApplication()->bootComponent('com_menus')->getMVCFactory()->createModel('Item', 'Administrator');
         $modelItem->getState(); 	//We need do this to set __state_set before the save
@@ -1292,12 +1318,14 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
     /**
      * This method update the row in database to store the menu item
      *
-     * @param       int     $rowId                      Row id to update
-     * @param       int     $idSeparatorMenuItem        Parent menu type used as father of the itens
+     * @param int $rowId Row id to update
+     * @param int $idSeparatorMenuItem Parent menu type used as father of the itens
      *
-     * @return      void
+     * @return void
+     * @throws Exception
+     * @since v2.0.0
      */
-    private function updateMenuItemDetailsView($rowId, $idItemDetailsView)
+    private function updateMenuItemDetailsView($rowId, $idItemDetailsView): void
     {
         $db = Factory::getContainer()->get('DatabaseDriver');
         $listModelMenuItens = Factory::getApplication()->bootComponent('com_fabrik')->getMVCFactory()->createModel('List', 'FabrikFEModel');
@@ -1317,12 +1345,14 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
     /**
      * This method update the row in database to store the menu page id
      *
-     * @param       int     $rowId         Row id to update
-     * @param       int     $pageId        Id of the visualization plugin
+     * @param int $rowId Row id to update
+     * @param int $pageId Id of the visualization plugin
      *
-     * @return      void
+     * @return void
+     * @throws Exception
+     * @since v2.0.0
      */
-    private function updateMenuPageId($rowId, $pageId)
+    private function updateMenuPageId($rowId, $pageId): void
     {
         $db = Factory::getContainer()->get('DatabaseDriver');
         $listModelMenuItens = Factory::getApplication()->bootComponent('com_fabrik')->getMVCFactory()->createModel('List', 'FabrikFEModel');
@@ -1342,11 +1372,13 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
     /**
      * This method giving a website id returns all menu itens related
      *
-     * @param       int         $websiteId      Id of the website to search menu itens rows
+     * @param int $websiteId Id of the website to search menu itens rows
      *
-     * @return      array
+     * @return array
+     * @throws Exception
+     * @since v2.0.0
      */
-    private function getMenuItensWebsite($websiteId)
+    private function getMenuItensWebsite($websiteId): array
     {
         $db = Factory::getContainer()->get('DatabaseDriver');
         $listModelMenuItens = Factory::getApplication()->bootComponent('com_fabrik')->getMVCFactory()->createModel('List', 'FabrikFEModel');
@@ -1373,9 +1405,10 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
     /**
      * This method get from database the current home screen giving a website id
      *
-     * @param       int     @websiteId      Id of the website to search the home page
+     * @param int $websiteId Id of the website to search the home page
      *
-     * @return      int
+     * @return int
+     * @since v2.0.0
      */
     private function getIdHomeScreen($websiteId)
     {
@@ -1390,26 +1423,26 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
             ->where($db->qn('menu_home_page') . ' = ' . $db->q('1'))
             ->where($db->qn('menu_type') . ' IN (' . implode(",", $db->q(['lista', 'visualizacao_do_item', 'formulario_adicionar', 'pagina'])) . ')');
         $db->setQuery($query);
-        $id = $db->loadResult();
 
-        return $id;
+        return $db->loadResult();
     }
 
     /**
      * This method return the website row for current menu item
      *
      * @return array
+     * @throws Exception
+     * @since v2.0.0
      */
-    private function getRowWebsite()
+    private function getRowWebsite(): array
     {
         $listModelWebsite = Factory::getApplication()->bootComponent('com_fabrik')->getMVCFactory()->createModel('List', 'FabrikFEModel');
         $listModelWebsite->setId($this->getIdListWebsite());
 
         $parentId = $this->getFormatData('site_raw');
         $rowWebsite = (array) $listModelWebsite->getRow($parentId);
-        $rowWebsite = $listModelWebsite->removeTableNameFromSaveData($rowWebsite);
 
-        return $rowWebsite;
+        return $listModelWebsite->removeTableNameFromSaveData($rowWebsite);
     }
 
     /**
