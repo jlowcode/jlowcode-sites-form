@@ -935,17 +935,14 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
         $listModelMenuItens = Factory::getApplication()->bootComponent('com_fabrik')->getMVCFactory()->createModel('List', 'FabrikFEModel');
         $listModelMenuItens->setId($this->getIdListMenuItens());
 
-        $formModelMenuItens = $listModelMenuItens->getFormModel();
-
-        $table = $formModelMenuItens->getTableName();
         $data = $this->getModel()->getData();
         $data = $listModelMenuItens->removeTableNameFromSaveData($data);
 
-        $websiteId = $this->getFormatData('site_raw', $data);
+        $websiteId = $this->getFormatData('site_raw', $data) ?? $this->getFormatData('id_raw', $data);
 
         $query = $db->getQuery(true);
         $query->select('COUNT(*)')
-            ->from($db->qn($table))
+            ->from($db->qn('itens_do_menu'))
             ->where($db->qn('site') . ' = ' . $db->q($websiteId));
         $db->setQuery($query);
         $count = $db->loadResult();
@@ -1816,6 +1813,8 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
      */
     protected function loadJS(): void
     {
+        $this->jsScriptTranslation();
+
         $opts = array();
         $opts['process'] = $this->checkProcess();
         $opts['newWebsite'] = $this->checkNewWebsite();
@@ -1830,6 +1829,17 @@ class PlgFabrik_FormJlowcode_sites extends PlgFabrik_Form
         $script = "var FabrikJlowcode_sites = new FabrikJlowcode_sites($options);";
 
         FabrikHelperHTML::script($jsFiles, $script);
+    }
+
+    /**
+     * Method sends message texts to javascript file
+     *
+     * @return null
+     * @since v2.0.0
+     */
+    private function jsScriptTranslation()
+    {
+        Text::script('PLG_FABRIK_FORM_JLOWCODE_SITES_WARNING_ADD_MENU_ITEM');
     }
 
     /**

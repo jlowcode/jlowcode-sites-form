@@ -43,6 +43,19 @@ define(['jquery', 'fab/fabrik'], function (jQuery, Fabrik) {
             
             self.setEventFillUrlByTitle();
             self.checkAccessToAddItens();
+            self.hideUrl();
+        },
+
+        /**
+         * This method hide the url of website details view if no menu item created
+         *
+         */
+        hideUrl: function () {
+            var self = this;
+
+            if (self.options.newWebsite) {
+                jQuery('#sites___url_ro').html(Joomla.JText._('PLG_FABRIK_FORM_JLOWCODE_SITES_WARNING_ADD_MENU_ITEM'));
+            }
         },
 
         /**
